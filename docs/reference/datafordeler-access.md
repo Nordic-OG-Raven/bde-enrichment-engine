@@ -94,3 +94,10 @@ lookup — only ownership/participant data (`CVRPerson`) needs the request in fl
   Register* and Vælg entiteter og tjenester* are. For CVR specifically, try
   submitting without an attachment first; EJF and SVR explicitly do need one, per
   above.
+- **An IT-system needs at least one registered IP before it can create a Dataadgang
+  request at all** — not documented in the guidance text above, discovered via the
+  UI's own error: *"IT-systemet skal have en registreret IP for at oprette en
+  dataadgangsanmodning."* Register one under the IT-system's **IP-adresser** tab
+  first. Note home/broadband IPs are often dynamic — a changed IP later is a
+  plausible silent-failure cause worth checking if a previously-working request
+  stops working.
