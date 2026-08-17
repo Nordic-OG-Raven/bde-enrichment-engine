@@ -8,7 +8,19 @@ in place every time it changes; never edit past entries in the Log — add a new
 
 ## Current State
 
-**As of 2026-08-17**
+**As of 2026-08-17 (updated)**
+
+- Open question 1 (Datafordeler.dk auth) resolved for BBR: a working tjenestebruger
+  account already exists, reused from the `aarhus_re` project (Finance-adjacent, at
+  `/Users/jonas/aarhus_re`), live-tested today against BBR — HTTP 200. CVR auth still
+  unconfirmed. See PRD 01 for details.
+- Build-vs-buy on BoligIQ/Accobat: leaning build, given proven low code volume
+  (~150–250 lines total) and now-confirmed working BBR access. Not fully closed —
+  still worth a cheap pricing check on their side, but no longer blocking.
+- Engine architecture decision: `requests` only, no `pandas`, for v1 — the precedent
+  project needed pandas for bulk ML-training pulls; this engine's single-record
+  lookups don't, and lighter dependencies are more portable into a future client's
+  environment (Azure Function, Power Automate, etc.).
 
 - SMV:Digital advisor status: **approved** (approval email received 2026-08-17).
   CV still needs finishing on ehmidt.dk — open items: which email inbox to list,
@@ -37,6 +49,34 @@ in place every time it changes; never edit past entries in the Log — add a new
 ---
 
 ## Log
+
+### 2026-08-17 — Resolved BBR auth; revised engine dependencies
+
+Went over PRD 01's two open questions in detail:
+
+1. **Datafordeler.dk auth**: found an existing, already-working tjenestebruger account
+   in the unrelated `aarhus_re` project (`/Users/jonas/aarhus_re/config/credentials.py`),
+   originally set up there to pull BBR data for an ML training set (213k buildings,
+   254k units, Aarhus kommune). That project's notes flagged a phaseout of the
+   webbruger/tjenestebruger auth system dated 30 June 2026, in favor of MitID Erhverv +
+   OAuth — a real risk since today is well past that date. Live-tested with a single
+   GET to `BBR/BBRPublic/1/REST/Bygning`: **HTTP 200, valid data**. The old auth still
+   works, at least for this endpoint (the phaseout note may have applied only to a
+   different, already-blocked Zone-5 endpoint). CVR auth remains unconfirmed — the
+   precedent project never queried CVR, only BBR and cadastral (Matrikel) data.
+   Reassuring fallback if CVR does need the new OAuth flow: it explicitly requires a
+   CVR number to enroll, and Nordic Raven Solutions (CVR 46097750) qualifies.
+2. **Build vs. buy (BoligIQ/Accobat)**: leaning build. The precedent BBR collector is
+   156 lines for a full bulk pull; a single-address lookup (what the engine actually
+   needs) is simpler still. Estimated full engine (BBR + CVR + join) at 150–250 lines —
+   low enough that buying access is hard to justify unless CVR auth turns out to be a
+   real blocker. Not fully closed (still worth a cheap look at their pricing), but no
+   longer gating anything.
+
+Also revised PRD 01's architecture: dropped `pandas` as a dependency for v1. The
+precedent project needed it for bulk ML-training pulls; this engine's single-record
+lookups don't, and a lighter (`requests`-only) dependency footprint is more portable
+if this code ever needs to run inside a future client's environment.
 
 ### 2026-08-17 — Re-scoped from four-sector plan to two products
 

@@ -67,9 +67,14 @@ zoning. Added the moment a demo or client engagement needs one of them, not befo
 ## Architecture
 
 - Language: Python 3.11+, matching existing tooling conventions.
-- HTTP: `httpx`.
-- Data shaping: `pandas` (or plain dicts if that's overkill for v1's record volume —
-  decide during implementation, not in this doc).
+- HTTP: `requests` — matches proven precedent (`aarhus_re`'s BBR collector) and keeps
+  dependencies minimal.
+- Data shaping: plain dataclasses, not `pandas`. The precedent project needed pandas
+  because it bulk-fetched 200k+ rows for ML training; this engine does single-record
+  lookups, where pandas is unnecessary weight. Keeping dependencies to just `requests`
+  matters beyond v1: if this code ever runs inside a client's environment (an Azure
+  Function, a Power Automate step), fewer/heavier dependencies is friction worth
+  avoiding in someone else's tenant.
 - No database required for v1 — outputs are computed on demand. Add SQLite/DuckDB only
   if repeated demo queries make on-demand fetching too slow or Datafordeler rate limits
   become a problem.
@@ -87,8 +92,20 @@ zoning. Added the moment a demo or client engagement needs one of them, not befo
 
 ## Open questions
 
-- Datafordeler.dk requires a (free) registered account/token — confirm exact auth flow
-  and rate limits before committing to it as the sole v1 source.
+- ~~Datafordeler.dk requires a (free) registered account/token — confirm exact auth flow
+  and rate limits before committing to it as the sole v1 source.~~ **Resolved for BBR,
+  2026-08-17**: a working tjenestebruger account already exists (from the `aarhus_re`
+  project) — username/password as query params, live-tested against
+  `BBR/BBRPublic/1/REST/Bygning` today, returns HTTP 200. Rate limit observed
+  previously: 429 with `Retry-After`, 2s between paged requests was sufficient.
+  **Still open for CVR**: the existing account has never been used against a CVR
+  endpoint — auth mechanism, whether the same tjenestebruger works, and rate limits
+  are all unconfirmed. Needs its own live test before the engine's CVR piece is built.
 - Real-vs-build call: BoligIQ / Accobat's Datadrevet Ejendom already sell pre-joined
   registry aggregations — worth a cheap check on their pricing/access before investing
   further engine time in raw BBR+CVR joining, in case reselling is cheaper than building.
+  Leaning build: existing precedent code (`aarhus_re/src/data/collectors/bbr.py`) shows
+  BBR fetch+normalize is ~150 lines for a bulk pull, likely 50–80 for a single-address
+  lookup; CVR lookup-by-number is typically a single GET call. Full engine (BBR + CVR +
+  join) estimated at 150–250 lines total — low enough effort that buying access looks
+  hard to justify unless CVR auth turns out to be a real blocker.
