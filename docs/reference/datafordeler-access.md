@@ -88,6 +88,25 @@ lookup — only ownership/participant data (`CVRPerson`) needs the request in fl
 - Legacy path: web user + service user, IP whitelist, email to
   dataudstilling@ufst.dk with the same information.
 
+## API access pattern (confirmed by live testing, 2026-08-17)
+
+- **CVR is GraphQL-only on a new host**: `https://graphql.datafordeler.dk/CVR/<version>`
+  (tried `v1` and `v3`, both route successfully — exact current version TBD).
+  This is a **different host** than the legacy BBR REST endpoints
+  (`services.datafordeler.dk`) — confirms `cvr.py` needs a GraphQL client, not a
+  copy of `bbr.py`'s REST/query-param pattern.
+- **Auth is a POST request with an `Authorization: apikey <key>` header** (per
+  Datafordeler's own DAR curl example) — confirmed the endpoint *recognizes* this
+  format: header-based attempts return `401` (credential rejected) rather than `404`
+  (route not found), while query-param-based auth attempts (`?apiKey=`, `?apikey=`)
+  returned `404` regardless of casing, i.e. that access pattern doesn't route the
+  same way for this service, or POST+query-param isn't how it works here. **Use
+  the header method.**
+- **A freshly-created API-key wasn't yet authenticating as of first test** —
+  Datafordeler's docs state a new key takes 15 minutes to activate. Untested
+  whether that alone explains it or something else is missing; retry after
+  confirming 15+ minutes have passed since the key was created in Administration.
+
 ## Practical UI notes (Datafordeler Administration)
 
 - Dataadgang form: "Bilag til ansøgning" is not marked required (no `*`) — only
