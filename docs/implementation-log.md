@@ -30,9 +30,13 @@ in place every time it changes; never edit past entries in the Log — add a new
   model from the legacy REST endpoints `bbr.py` currently calls. So the BBR credential
   is still shared with `aarhus_re` for now; this new account unblocks CVR specifically,
   not a drop-in BBR replacement. Needs confirming either way before assuming otherwise.
-  **No actual CVR data access yet** — the portal's "Dataadgang" (data access requests)
-  section is empty; credentials alone don't grant access to protected register data,
-  an explicit request still has to be submitted and approved there.
+  **Update, same day, confirmed from Datafordeler's own access guidance**: only the
+  `CVRPerson` entity is access-restricted. Every other CVR entity (basic company
+  data) is unrestricted and already fetchable with the existing credentials — no
+  Dataadgang request needed for that. A `CVRPerson` request is being submitted
+  anyway (see log entry below) for future ownership-tracing value, not because
+  basic company lookup needs it. Full guidance captured at
+  [docs/reference/datafordeler-access.md](reference/datafordeler-access.md).
 - Open question 1 (Datafordeler.dk auth) resolved for BBR: a working tjenestebruger
   account already exists, reused from the `aarhus_re` project (at
   `/Users/jonas/aarhus_re`), live-tested — HTTP 200, confirmed working.
@@ -69,27 +73,58 @@ in place every time it changes; never edit past entries in the Log — add a new
 
 ## Next actions
 
-1. Build the Streamlit demo (PRD 02) on top of the working engine.
-2. In Datafordeler Administration → `bde-enrichment-engine` → **Dataadgang**, submit
-   an access request for the CVR register/entity actually needed (start with basic
-   company data; only reach for the restricted `CVRPerson` entity if ownership data
-   turns out to be necessary). Nothing CVR-related works until this is approved.
-3. Confirm whether the new API-key/OAuth credentials authenticate against BBR/CVR
-   REST endpoints too, or are GraphQL/Fildownload-only as Administration's own copy
-   suggests — decides whether a future `cvr.py` can reuse `bbr.py`'s REST pattern or
-   needs a GraphQL client instead.
-4. If the CVR access request ends up needing OAuth (protected data), register a
-   whitelisted IP address in Administration's **IP-adresser** tab — flag that a home
-   broadband IP is often dynamic, worth checking before assuming this is a one-time step.
+1. Build a `cvr.py` module for basic (non-`CVRPerson`) company lookup — confirmed
+   unrestricted, no approval wait needed. Worth doing before or alongside the
+   Streamlit demo since it's now unblocked.
+2. Build the Streamlit demo (PRD 02) on top of the working engine.
+3. `CVRPerson` Dataadgang request submitted 2026-08-17 (see log) — check back for
+   approval; not blocking anything else in the meantime.
+4. Confirm whether the Administration API-key/OAuth credentials authenticate
+   against classic REST endpoints too, or are GraphQL/Fildownload-only as
+   Administration's own copy suggests — decides whether `cvr.py` can reuse
+   `bbr.py`'s REST pattern or needs a GraphQL client instead.
 5. Get the demo in front of one real prospect.
 6. Decouple the BBR REST credential from `aarhus_re` (2026-08-17 review, finding 2) —
-   still open; the new Administration account doesn't cover this per item 3 above.
+   still open; the new Administration account's scope relative to BBR is unconfirmed
+   per item 4 above.
 7. (Optional, not blocking) Cheap pricing check on BoligIQ/Accobat, mostly to settle
    the build-vs-buy question fully rather than because it's needed.
+8. (Separate project, noted for whenever it's relevant) `aarhus_re` could retry EJF
+   sale-price data via the proper Administration + MitID Erhverv + bilag path
+   documented in [docs/reference/datafordeler-access.md](reference/datafordeler-access.md)
+   — its earlier ad-hoc REST attempt was blocked on IP whitelisting for the wrong
+   reason (wrong path, not a hard no).
 
 ---
 
 ## Log
+
+### 2026-08-17 — Confirmed CVR access tiers from Datafordeler's own guidance; applying for CVRPerson anyway
+
+Pulled the full "Vejledning og bilag til ansøgning" content from inside Datafordeler
+Administration (authenticated portal — captured in full at
+[docs/reference/datafordeler-access.md](reference/datafordeler-access.md) since it
+can't be re-fetched later without logging back in). This settles something the
+earlier web-search-based research had only indirectly suggested: Erhvervsstyrelsen's
+own text states plainly that **only `CVRPerson` needs an access request** — every
+other CVR entity is unrestricted and already usable with the existing
+`bde-enrichment-engine` credentials, no waiting required.
+
+Decision: apply for `CVRPerson` access anyway, despite it not being needed for
+anything currently in scope. Reasoning — unlike writing code ahead of need, an
+access *request* has a real approval lead time and zero ongoing cost, so applying
+now is free optionality, not scope creep. Ownership/participant tracing (who
+actually controls a property-holding company) was in the original strategic
+analysis's CVR value proposition and is a plausible real differentiator for the
+real estate vertical later. No CVR-specific bilag document appears to be required
+per the guidance (unlike EJF/SVR, which do); the on-screen form's own fields don't
+mark the attachment as required either.
+
+Side finding, not for this project: `aarhus_re`'s earlier blocked attempt at EJF
+(Ejerfortegnelsen) sale-price data was blocked on IP whitelisting for a legacy
+Zone-5 REST endpoint — this guidance shows the actual supported path (Administration
++ MitID Erhverv + a specific EJF bilag document) was never tried. Noted in next
+actions in case that project revisits it.
 
 ### 2026-08-17 — Set up a dedicated Datafordeler Administration account for CVR
 
