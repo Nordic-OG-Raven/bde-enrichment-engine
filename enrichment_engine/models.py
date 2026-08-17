@@ -44,7 +44,17 @@ class Unit:
 
 
 @dataclass
+class EnergyLabel:
+    energy_class: str
+    energimaerkenr: str
+    valid_from: str
+    valid_to: str
+    is_historic: bool
+
+
+@dataclass
 class PropertyProfile:
     address: ResolvedAddress
     building: BuildingProfile | None
     units: list[Unit]
+    energy_label: EnergyLabel | None

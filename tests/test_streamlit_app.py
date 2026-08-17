@@ -37,6 +37,14 @@ def test_multi_unit_building_shows_map_and_units_table():
     assert len(at.dataframe) == 1
 
 
+def test_shows_energy_label_when_available():
+    at = _run("Guldsmedgade 21, 8000 Aarhus")
+    assert not at.exception
+    metric_labels = {m.label: m.value for m in at.metric}
+    assert "Energimærke" in metric_labels
+    assert metric_labels["Energimærke"] in {"A", "B", "C", "D", "E", "F", "G"}
+
+
 def test_not_found_shows_friendly_error_not_a_traceback():
     at = _run("Nonexistentgade 99999, 8000 Aarhus")
     assert not at.exception

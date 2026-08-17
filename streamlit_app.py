@@ -56,6 +56,14 @@ if submitted and query:
                     dcol1.markdown(f"**{label}**")
                     dcol2.write(value or "Ukendt")
 
+            if profile.energy_label is not None:
+                st.markdown("&nbsp;")
+                el = profile.energy_label
+                ecol1, ecol2 = st.columns([1, 2])
+                ecol1.metric("Energimærke", el.energy_class)
+                status = "udløbet" if el.is_historic else "gyldigt"
+                ecol2.caption(f"{status.capitalize()} {el.valid_from} – {el.valid_to} (nr. {el.energimaerkenr})")
+
             if profile.address.lat is not None and profile.address.lon is not None:
                 st.markdown("&nbsp;")
                 st.map([{"lat": profile.address.lat, "lon": profile.address.lon}], size=30)
