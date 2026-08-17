@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | v1 (BBR-only) implemented, address+BBR lookup tested end-to-end |
+| Status | v1 (BBR-only) implemented, reviewed, and hardened — see [2026-08-17 review](../reviews/2026-08-17-engine-v1-review.md) |
 | Owner | Jonas Haahr |
 | Created | 2026-08-17 |
 | Last updated | 2026-08-17 |

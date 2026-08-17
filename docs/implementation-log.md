@@ -8,14 +8,23 @@ in place every time it changes; never edit past entries in the Log — add a new
 
 ## Current State
 
-**As of 2026-08-17 (updated)**
+**As of 2026-08-17 (updated again — post self-review)**
 
-- **Engine v1 (BBR-only) is implemented and working.** `enrichment_engine/` resolves a
-  free-text Danish address (via Dataforsyningen, free/no auth) and returns a normalized
-  `PropertyProfile` with BBR building data (year built, area, floors, wall/roof
-  material, heating type). Tested end-to-end against two real Aarhus addresses.
-  Run via `PYTHONPATH=. python scripts/lookup_address.py "<address>"` (venv at
-  `.venv/`, deps in `requirements.txt`, credentials in `.env` — gitignored).
+- **Engine v1 (BBR-only) is implemented, self-reviewed, and hardened.**
+  `enrichment_engine/` resolves a free-text Danish address (via Dataforsyningen,
+  free/no auth) and returns a normalized `PropertyProfile` with BBR building data
+  (year built, area, floors, wall/roof material, heating type) — now decoded to
+  human-readable Danish labels, not raw codes. Errors are typed and caught (no raw
+  tracebacks), 429s retry with backoff, `.env` is permission-locked, and 7 tests
+  cover the fiddly logic. Full findings + resolutions in
+  [docs/reviews/2026-08-17-engine-v1-review.md](reviews/2026-08-17-engine-v1-review.md).
+  Run via `python scripts/lookup_address.py "<address>"` (venv at `.venv/`, prod deps
+  in `requirements.txt`, dev+test deps in `requirements-dev.txt`, credentials in
+  `.env` — gitignored, chmod 600).
+- **One finding deliberately left open**: the BBR credential is shared, undocumented
+  infrastructure with the unrelated `aarhus_re` project — no code fix without
+  registering BDE's own Datafordeler account, which is its own signup/approval flow.
+  Queued below, not blocking.
 - Open question 1 (Datafordeler.dk auth) resolved for BBR: a working tjenestebruger
   account already exists, reused from the `aarhus_re` project (at
   `/Users/jonas/aarhus_re`), live-tested — HTTP 200, confirmed working.
@@ -56,12 +65,55 @@ in place every time it changes; never edit past entries in the Log — add a new
 2. Submit the free CVR access request (MitID Erhverv + OAuth via Datafordeler
    Administration) in parallel — not blocking, but has lead time.
 3. Get the demo in front of one real prospect.
-4. (Optional, not blocking) Cheap pricing check on BoligIQ/Accobat, mostly to settle
+4. Register a dedicated BDE Datafordeler tjenestebruger account, so this project
+   stops depending on a credential shared with (and owned by) `aarhus_re` — see
+   the 2026-08-17 review, finding 2. Not blocking, but worth doing before any real
+   client traffic runs through this.
+5. (Optional, not blocking) Cheap pricing check on BoligIQ/Accobat, mostly to settle
    the build-vs-buy question fully rather than because it's needed.
 
 ---
 
 ## Log
+
+### 2026-08-17 — Adversarial self-review of the v1 engine; 13 findings, 12 fixed
+
+Reviewed the just-built engine deliberately critically (security, correctness,
+code quality, product/UX) before it goes anywhere near a demo. Findings and
+resolutions documented in full at
+[docs/reviews/2026-08-17-engine-v1-review.md](reviews/2026-08-17-engine-v1-review.md).
+Highlights:
+
+- **`_pick_current()` could have silently surfaced a demolished building's data as
+  current** (no `status` field check at all). Researched BBR's actual status
+  codelist via Datafordeler/BBR Instruks docs — confirmed `status == 6` means
+  "opført"/current — and now prefer that when present, falling back to the old
+  heuristic (now datetime-aware, not string-comparison) otherwise. Full status
+  codelist (1-9) wasn't fully confirmable from public docs despite real effort;
+  documented as a known limitation rather than papered over.
+- **Zero error handling previously existed**, despite PRD 02 explicitly requiring
+  graceful failure. Added typed exceptions (`AddressLookupError`,
+  `AddressNotFoundError`, `BBRLookupError`), 429 retry-with-backoff respecting
+  `Retry-After`, and a CLI that prints a clean message instead of a traceback.
+- **Raw BBR codes (`wall_material='1'`) were being shown undecoded**, undermining
+  PRD 02's whole "instant, legible" pitch. Researched and added `codelists.py`
+  (sourced from BBR Instruks, cited in-file) decoding use/wall/roof/heating codes
+  to Danish labels, with a visible `"Ukendt (kode X)"` fallback for anything unmapped
+  rather than silently dropping data.
+- **Added an ambiguity flag** to `ResolvedAddress` for queries matching multiple
+  distinct buildings. First implementation compared raw result count and immediately
+  false-positived in testing on every normal multi-unit building (multiple
+  floor-level address rows, same building) — caught live and fixed to compare
+  distinct `adgangsadresse` IDs instead.
+- Fixed `.env` permissions (was world-readable), `config.py`'s raw `KeyError` on
+  missing env vars, inaccurate type hints, a stale docstring in
+  `scripts/lookup_address.py` that told readers to run it in a way that actually
+  raised `ModuleNotFoundError`, and added logging plus 7 tests
+  (`tests/test_bbr.py`, `tests/test_codelists.py`) covering the fiddliest logic.
+- **One finding left deliberately unresolved**: the shared-with-`aarhus_re`
+  credential (finding 2) needs a new Datafordeler account, not a code change —
+  documented and queued rather than false-claimed as fixed.
+- Re-tested end-to-end against real Aarhus addresses post-fix; all 7 tests pass.
 
 ### 2026-08-17 — Built and tested the v1 (BBR-only) engine; CVR moved out of scope
 
