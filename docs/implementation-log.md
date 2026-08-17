@@ -92,10 +92,14 @@ in place every time it changes; never edit past entries in the Log — add a new
    implies "it'll work once deployed" for anything IP-gated.
 3. `CVRPerson` Dataadgang request: submitted 2026-08-17, status "Ny" — check back
    for approval; not blocking anything else in the meantime.
-4. Confirm whether the Administration API-key/OAuth credentials authenticate
-   against classic REST endpoints too, or are GraphQL/Fildownload-only as
-   Administration's own copy suggests — decides whether `cvr.py` can reuse
-   `bbr.py`'s REST pattern or needs a GraphQL client instead.
+4. ~~Confirm whether the Administration API-key/OAuth credentials authenticate
+   against classic REST endpoints too, or are GraphQL/Fildownload-only~~
+   **Resolved 2026-08-17**: GraphQL-only, on `graphql.datafordeler.dk` (new host,
+   not `services.datafordeler.dk`). **But the API-key itself doesn't
+   authenticate at all** — confirmed via live testing against both CVR and
+   Datafordeler's own official documented DAR example, well past the 15-minute
+   activation window. Escalated to Datafordeler support (draft below) — `cvr.py`
+   is blocked on this, not on anything code-side.
 5. Get the demo in front of one real prospect.
 6. Decouple the BBR REST credential from `aarhus_re` (2026-08-17 review, finding 2) —
    still open; the new Administration account's scope relative to BBR is unconfirmed
@@ -111,6 +115,68 @@ in place every time it changes; never edit past entries in the Log — add a new
 ---
 
 ## Log
+
+### 2026-08-17 — API-key doesn't authenticate against any service; escalated to Datafordeler support
+
+Went to build `cvr.py` and hit an auth wall before writing any real code. Full
+diagnostic trail in
+[docs/reference/datafordeler-access.md](reference/datafordeler-access.md)
+("API access pattern" section); summary:
+
+- Confirmed via the IT-system's own revision log that the `local-dev` API-key was
+  created at 15:11:16 — ruling out the documented 15-minute activation delay as
+  an explanation for anything tested afterward.
+- Tried header auth (`Authorization: apikey <key>`, matching Datafordeler's own
+  documented curl format) against `CVR/v1` and `CVR/v3` — 401 both times.
+- Tried the key as a URL query parameter (both casings, GET and POST) — 404
+  every time, route not matched.
+- **Decisive test**: reproduced Datafordeler's own official example *exactly* —
+  same header format, against `DAR/v1` (a different, unrestricted register) —
+  to rule out a CVR-specific path mistake. **Also 401.**
+- Conclusion: this isn't a formatting error or a wrong endpoint guess on our
+  side — their own example fails identically, so something is wrong with the
+  key/account provisioning on Datafordeler's end, despite Administration showing
+  the key as "Aktiv". Not something guessable from outside their system.
+
+**Escalating to Datafordeler support** rather than continuing to guess against a
+live government API. Draft support request (Danish, matching the support
+audience):
+
+> Kære Datafordeler support,
+>
+> Jeg oplever, at en nyoprettet API-Key ikke kan autentificere mod jeres
+> GraphQL-tjenester, selv ved brug af jeres egen dokumenterede eksempel.
+>
+> Kontooplysninger:
+> - Bruger: Jonas Haahr
+> - Organisation: Nordic Raven Solutions, CVR 46097750
+> - IT-system: bde-enrichment-engine
+> - API-Key: local-dev, oprettet 17-08-2026 kl. 15:11:16, status "Aktiv",
+>   udløbsdato 17-08-2028
+> - Registreret IP: 83.94.224.228/32
+>
+> Testet (alle 401 Unauthorized, mere end 35 minutter efter oprettelse af
+> nøglen, dvs. efter jeres oplyste 15-minutters aktiveringsvindue):
+>
+> 1. POST https://graphql.datafordeler.dk/CVR/v1 med header "Authorization:
+>    apikey <min nøgle>" og query "{ __typename }" → 401
+> 2. Samme mod https://graphql.datafordeler.dk/CVR/v3 → 401
+> 3. API-Key som URL query-parameter (?apiKey= og ?apikey=, både GET og POST)
+>    → 404 (rute ikke fundet)
+> 4. For at udelukke at det er CVR-specifikt: gentaget jeres eget dokumenterede
+>    eksempel præcist mod DAR (POST https://graphql.datafordeler.dk/DAR/v1,
+>    samme header-format) → også 401
+>
+> Da jeres eget dokumenterede eksempel fejler identisk, formoder jeg at der er
+> noget galt med selve nøglens provisionering på jeres side. Kan I hjælpe med
+> at afklare, om nøglen er korrekt oprettet og aktiveret?
+>
+> Med venlig hilsen,
+> Jonas Haahr
+> 51 50 56 95 / jonas.haahr@aol.com
+
+Not blocking BBR work (unaffected, separate credential/system) — only blocks
+`cvr.py`, which is now on hold pending support's response.
 
 ### 2026-08-17 — Confirmed CVR access tiers from Datafordeler's own guidance; applying for CVRPerson anyway
 

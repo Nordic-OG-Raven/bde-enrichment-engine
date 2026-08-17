@@ -102,10 +102,24 @@ lookup — only ownership/participant data (`CVRPerson`) needs the request in fl
   returned `404` regardless of casing, i.e. that access pattern doesn't route the
   same way for this service, or POST+query-param isn't how it works here. **Use
   the header method.**
-- **A freshly-created API-key wasn't yet authenticating as of first test** —
-  Datafordeler's docs state a new key takes 15 minutes to activate. Untested
-  whether that alone explains it or something else is missing; retry after
-  confirming 15+ minutes have passed since the key was created in Administration.
+- **API-key does not authenticate — confirmed not a timing or format issue.**
+  Revision log confirms the key was created at 15:11:16; all tests below ran
+  35+ minutes later, well past the documented 15-minute activation window.
+  Tried, all against a live, non-restricted service:
+  - Header `Authorization: apikey <key>` (Datafordeler's own documented DAR
+    curl format) against `CVR/v1` and `CVR/v3` → **401** both times.
+  - Bare `apikey:` header, capitalized `Authorization: Apikey` → **401**.
+  - Key as URL query param (`?apiKey=`, `?apikey=`), both GET and POST → **404**
+    every time (route not matched at all with this style).
+  - **Decisive test**: reproduced Datafordeler's own official documented
+    example *exactly* — `POST https://graphql.datafordeler.dk/DAR/v1` with
+    `Authorization: apikey <key>` header, DAR being a different, unrestricted
+    register — using the literal curl format from their own docs. **Also 401.**
+  - Since their own example fails verbatim with this key, the issue isn't a
+    wrong CVR-specific path or a formatting mistake on our end — something is
+    wrong with the key/account provisioning itself, despite the portal showing
+    Status "Aktiv". **Escalated to Datafordeler support** (see implementation
+    log, 2026-08-17).
 
 ## Practical UI notes (Datafordeler Administration)
 
