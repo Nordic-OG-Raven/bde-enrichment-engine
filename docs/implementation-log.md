@@ -91,9 +91,16 @@ all (internal-data BI platform for property administrators, not public-data
 aggregation — closer to a possible future BDE offering than a current threat).
 BoligIQ is a genuine, directly comparable competitor: 20+ registries via one API,
 broader than us (has Tinglysning/EJF, which we don't), ~10,000 DKK/year flat.
-Their marketing doesn't mention historical sale price data, which we do have via
-`ois.py` — a plausible but unconfirmed differentiator, worth verifying via their
-free trial before relying on it.
+
+**Correction, same day**: initially thought their marketing didn't mention
+historical sale price data (a possible differentiator for us). Wrong — only
+checked their overview page, not their Tinglysning API docs, which return
+`købspris_dkk` straight from deed registration - arguably more authoritative
+than our own OIS/SVUR route. No trial signup was needed to check this; their
+public API docs settled it directly. No real data-based differentiator survives
+this check - BoligIQ is ahead of us on every breadth axis now (Tinglysning, EJF,
+CVR ownership, Plandata, Vurderingsstyrelsen, ejendomsskat, price - all things
+we either lack or have unofficial/fragile equivalents of).
 
 Resolves PRD 01's old build-vs-buy open question with an actual number instead
 of a guess: still building for now (already working, free), but buying BoligIQ
@@ -101,6 +108,20 @@ access is a real option if a future client needs Tinglysning/EJF breadth.
 Reinforces the original strategic conclusion this project started from: compete
 on integration labor for smaller operators, not on raw registry-data breadth,
 which is already commoditized at a real, low price point.
+
+**Reconsideration prompted by the correction**: our own engine's real job was
+always the free demo (PRD 02), not a production data backbone to compete on
+completeness - it still does that job well at zero cost pre-revenue. But once
+there's a paying client, ~833 DKK/month for BoligIQ's full coverage is trivial
+next to one engagement's value, and buying it may be more sensible than
+maintaining `energimaerke.py`/`ois.py` (unofficial, could break without
+warning - a real liability in front of a paying client) long-term. Sharper
+differentiation angle surfaced: the CSRD/ESG compliance wedge from the original
+strategic analysis (scoped for agrifood) applies directly to commercial real
+estate too - energy performance/emissions reporting is a compliance requirement,
+not just a dashboard nice-to-have, and neither competitor appears to position
+around it. We already have the energy certificate data; the gap is the
+compliance-reporting framing and emissions modeling on top.
 
 ### 2026-08-17 — Dropped st.map() after confirming it silently fails without WebGL
 
