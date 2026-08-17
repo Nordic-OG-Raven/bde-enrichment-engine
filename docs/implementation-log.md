@@ -8,109 +8,66 @@ in place every time it changes; never edit past entries in the Log — add a new
 
 ## Current State
 
-**As of 2026-08-17 (updated again — post self-review)**
+**As of 2026-08-17**
 
-- **Engine v1 (BBR-only) is implemented, self-reviewed, and hardened.**
-  `enrichment_engine/` resolves a free-text Danish address (via Dataforsyningen,
-  free/no auth) and returns a normalized `PropertyProfile` with BBR building data
-  (year built, area, floors, wall/roof material, heating type) — now decoded to
-  human-readable Danish labels, not raw codes. Errors are typed and caught (no raw
-  tracebacks), 429s retry with backoff, `.env` is permission-locked, and 7 tests
-  cover the fiddly logic. Full findings + resolutions in
-  [docs/reviews/2026-08-17-engine-v1-review.md](reviews/2026-08-17-engine-v1-review.md).
-  Run via `python scripts/lookup_address.py "<address>"` (venv at `.venv/`, prod deps
-  in `requirements.txt`, dev+test deps in `requirements-dev.txt`, credentials in
-  `.env` — gitignored, chmod 600).
-- **Dedicated BDE Datafordeler Administration account now exists** (owner: Jonas
-  Haahr, org: Nordic Raven Solutions, CVR 46097750), with its own IT-system
-  (`bde-enrichment-engine`) holding an API-key and an OAuth Shared Secret — see the
-  dated log entry below for full metadata. This is groundwork for CVR, not yet a fix
-  for the BBR finding: Datafordeler Administration's own copy describes API-keys/
-  OAuth as granting access "via Fildownload (HTTPS) og GraphQL" — a different auth
-  model from the legacy REST endpoints `bbr.py` currently calls. So the BBR credential
-  is still shared with `aarhus_re` for now; this new account unblocks CVR specifically,
-  not a drop-in BBR replacement. Needs confirming either way before assuming otherwise.
-  **Update, same day, confirmed from Datafordeler's own access guidance**: only the
-  `CVRPerson` entity is access-restricted. Every other CVR entity (basic company
-  data) is unrestricted and already fetchable with the existing credentials — no
-  Dataadgang request needed for that. Full guidance captured at
-  [docs/reference/datafordeler-access.md](reference/datafordeler-access.md).
-  **`CVRPerson` access request: submitted 2026-08-17, status "Ny" (pending), no
-  attachment included** — the guidance never called for one and the form didn't
-  mark it required, so none was sent. Small residual risk Erhvervsstyrelsen asks
-  for more information before approving; low-effort to supply if/when they do,
-  not worth pre-empting with a document to a spec we don't actually have. IP
-  `83.94.224.228` (this machine's current network) registered as `/32` on the
-  IT-system — required before Datafordeler would even accept a Dataadgang request,
-  not documented anywhere until the portal's own error surfaced it.
-- Open question 1 (Datafordeler.dk auth) resolved for BBR: a working tjenestebruger
-  account already exists, reused from the `aarhus_re` project (at
-  `/Users/jonas/aarhus_re`), live-tested — HTTP 200, confirmed working.
-- **CVR is out of v1 scope.** It's not a matter of reusing the BBR credential — CVR
-  access requires its own request/approval process (MitID Erhverv+OAuth, or legacy
-  REST with mandatory IP whitelisting), with no free instant path. Decision: ship the
-  BBR-only demo first; submit the free CVR access request in parallel since it has
-  lead time regardless.
-- Build-vs-buy on BoligIQ/Accobat: leaning build, given proven low code volume and
-  now-working BBR access. Not fully closed — still worth a cheap pricing check on
-  their side — but no longer blocking.
-- Engine architecture: `requests` only, no `pandas` — precedent project needed pandas
-  for bulk ML-training pulls; this engine's single-record lookups don't, and lighter
-  dependencies are more portable into a future client's environment.
-- Heads-up for later: Datafordeler REST (the API style used here) is being phased out
-  Datafordeler-wide by end of 2026 in favor of GraphQL. Not a v1 concern (months of
-  runway), but worth remembering before investing heavily in more REST-based fetches.
-
-- SMV:Digital advisor status: **approved** (approval email received 2026-08-17).
-  CV still needs finishing on ehmidt.dk — open items: which email inbox to list,
-  full LinkedIn URL, hourly rate, named vs. anonymized SME reference. Onboarding
-  webinar deadline: **2026-11-17** (3 months from approval).
-- Clients: **zero**. Fully pre-revenue, fully flexible on sector/tooling.
-- Products in scope right now: two.
-  1. [External Data Enrichment Engine](prd/01-external-data-enrichment-engine.md) — not started.
-  2. [Real Estate Prospecting Demo](prd/02-real-estate-prospecting-demo.md) — not started, depends on (1).
-- No code written yet. No repo dependencies installed yet.
-- Strategic direction: deliberately narrower than the original sector-broad plan
-  (see `strategy/` for the superseded four-sector research — kept as background,
-  not a binding roadmap). Current approach: build the cheapest possible free proof
-  of value in one sector (real estate), let the first real client's actual tooling
-  (Power BI or otherwise) dictate delivery mechanics, rather than pre-committing to
-  a tool or building infrastructure across sectors before there's demand signal.
+- **SMV:Digital advisor status: approved.** CV still needs finishing on
+  ehmidt.dk (email inbox, LinkedIn URL, hourly rate, reference). Onboarding
+  webinar deadline: **2026-11-17**.
+- **Clients: zero.** Fully pre-revenue.
+- **Product 1, Enrichment Engine — v1 (BBR-only) done, reviewed, hardened.**
+  `enrichment_engine/` resolves a free-text Danish address (Dataforsyningen,
+  free/no auth) to a normalized `PropertyProfile` with BBR building data,
+  decoded to human-readable Danish labels. Typed exceptions, 429 retry/backoff,
+  `.env` chmod 600, 7 unit tests. Details:
+  [2026-08-17 review](reviews/2026-08-17-engine-v1-review.md). Run via
+  `python scripts/lookup_address.py "<address>"`.
+- **Product 2, Streamlit Demo — v1 done, tested locally, not yet deployed.**
+  `streamlit_app.py`: single address input, decoded BBR metrics, clean
+  not-found/ambiguous handling. Verified with 3 `streamlit.testing.v1.AppTest`
+  cases (no manual-only eyeballing). Full suite: **10/10 passing**. Run via
+  `streamlit run streamlit_app.py`. **Not yet deployed or shown to a prospect.**
+- **CVR is out of v1 scope, and currently blocked at the infrastructure level.**
+  Only the `CVRPerson` entity is access-restricted (confirmed from
+  Erhvervsstyrelsen's own guidance — other CVR data needs no request); a
+  `CVRPerson` Dataadgang request was submitted 2026-08-17 (status "Ny",
+  pending). Separately, the account's API-key doesn't authenticate at all —
+  fails even against Datafordeler's own official documented example (tested
+  well past their 15-minute activation window) — so a Datafordeler support
+  ticket was filed 2026-08-17. `cvr.py` is blocked on that response, not on
+  anything code-side. Full trail: [datafordeler-access.md](reference/datafordeler-access.md).
+- **BBR credential is still shared with the unrelated `aarhus_re` project** —
+  a new dedicated Datafordeler Administration account exists now
+  (`bde-enrichment-engine` IT-system) but it's GraphQL/Fildownload-only, a
+  different service surface than the legacy REST BBR currently uses, so it
+  doesn't replace the shared credential. Still open, not blocking.
+- Build-vs-buy on BoligIQ/Accobat: leaning build (low code volume, BBR already
+  working). Not fully closed, not blocking.
+- Strategic direction: deliberately narrower than the original four-sector plan
+  (see `strategy/` — background only, not binding). Real estate first, one free
+  data source at a time, tool choice deferred until there's a real client.
 
 ## Next actions
 
-1. ~~Build a `cvr.py` module for basic (non-`CVRPerson`) company lookup~~ **On
-   hold** — API-key doesn't authenticate at all (see 2026-08-17 log entries).
-   Datafordeler support ticket submitted; blocked on their response.
-2. Build the Streamlit demo (PRD 02) on top of the working engine. **Before/when
-   deploying it to a cloud host** (Streamlit Community Cloud per PRD 02): if the
-   demo ever needs live calls to `CVRPerson` or any other OAuth/IP-whitelisted
-   Datafordeler service, that host's outbound IP will need registering on the
-   IT-system too — and free hosting tiers often don't give a fixed IP, which could
-   be a real obstacle, not just paperwork. Not a problem yet (local dev only,
-   and the v1 demo doesn't use CVR at all), but don't assume "it works locally"
-   implies "it'll work once deployed" for anything IP-gated.
-3. `CVRPerson` Dataadgang request: submitted 2026-08-17, status "Ny" — check back
-   for approval; not blocking anything else in the meantime.
-4. ~~Confirm whether the Administration API-key/OAuth credentials authenticate
-   against classic REST endpoints too, or are GraphQL/Fildownload-only~~
-   **Resolved 2026-08-17**: GraphQL-only, on `graphql.datafordeler.dk` (new host,
-   not `services.datafordeler.dk`). **But the API-key itself doesn't
-   authenticate at all** — confirmed via live testing against both CVR and
-   Datafordeler's own official documented DAR example, well past the 15-minute
-   activation window. Escalated to Datafordeler support (draft below) — `cvr.py`
-   is blocked on this, not on anything code-side.
-5. Get the demo in front of one real prospect.
-6. Decouple the BBR REST credential from `aarhus_re` (2026-08-17 review, finding 2) —
-   still open; the new Administration account's scope relative to BBR is unconfirmed
-   per item 4 above.
-7. (Optional, not blocking) Cheap pricing check on BoligIQ/Accobat, mostly to settle
-   the build-vs-buy question fully rather than because it's needed.
-8. (Separate project, noted for whenever it's relevant) `aarhus_re` could retry EJF
-   sale-price data via the proper Administration + MitID Erhverv + bilag path
-   documented in [docs/reference/datafordeler-access.md](reference/datafordeler-access.md)
-   — its earlier ad-hoc REST attempt was blocked on IP whitelisting for the wrong
-   reason (wrong path, not a hard no).
+1. **Deploy `streamlit_app.py` to Streamlit Community Cloud** — built and
+   tested locally, not yet live anywhere. The actual next step toward a
+   shareable URL per PRD 02's success criteria. Note for when this happens: if
+   the demo ever needs live `CVRPerson`/IP-gated calls in the future, the
+   host's outbound IP will need registering too, and free tiers often don't
+   offer a fixed IP — not a v1 problem (BBR-only, no IP-gated calls), but don't
+   assume local-dev access implies deployed access later.
+2. **Get the demo in front of one real prospect** — the actual end goal,
+   blocked only on (1).
+3. Wait on Datafordeler support's reply re: the non-authenticating API-key,
+   then resume `cvr.py` (basic company lookup — confirmed unrestricted once
+   auth actually works).
+4. Check back on the `CVRPerson` Dataadgang request status.
+5. Decouple the BBR REST credential from `aarhus_re` (2026-08-17 review,
+   finding 2) — still open, not blocking.
+6. *(Optional)* Cheap pricing check on BoligIQ/Accobat.
+7. *(Separate project)* `aarhus_re` could retry EJF sale-price data via the
+   proper Administration + MitID Erhverv + bilag path documented in
+   [datafordeler-access.md](reference/datafordeler-access.md) — its earlier
+   ad-hoc attempt was blocked on the wrong path, not a hard no.
 
 ---
 

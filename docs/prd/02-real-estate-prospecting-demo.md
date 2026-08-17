@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Draft |
+| Status | v1 implemented (`streamlit_app.py`), tested locally via `streamlit.testing.v1.AppTest` — not yet deployed/shared with a prospect |
 | Owner | Jonas Haahr |
 | Created | 2026-08-17 |
 | Last updated | 2026-08-17 |
