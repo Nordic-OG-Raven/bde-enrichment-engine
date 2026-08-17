@@ -32,6 +32,11 @@ def test_multi_unit_building_shows_map_and_units_table():
     assert not at.exception
     assert not at.error
     assert len(at.get("deck_gl_json_chart") + at.get("map")) >= 1  # st.map renders as one of these
+    # Plain link fallback - can't fail the way a tile-loading JS map can, so
+    # this should always be present whenever coordinates are available,
+    # independent of whether st.map's own rendering works in a given browser.
+    markdown_text = " ".join(m.value for m in at.markdown)
+    assert "Google Maps" in markdown_text
     subheader_text = " ".join(s.value for s in at.subheader)
     assert "Enheder" in subheader_text
     assert len(at.dataframe) == 1

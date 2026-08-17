@@ -74,7 +74,9 @@ if submitted and query:
 
             if profile.address.lat is not None and profile.address.lon is not None:
                 st.markdown("&nbsp;")
-                st.map([{"lat": profile.address.lat, "lon": profile.address.lon}], size=30, zoom=15)
+                lat, lon = profile.address.lat, profile.address.lon
+                st.markdown(f"[Åbn i Google Maps](https://www.google.com/maps?q={lat},{lon})")
+                st.map([{"lat": lat, "lon": lon}], size=30, zoom=15)
 
             if profile.units:
                 st.markdown("&nbsp;")
