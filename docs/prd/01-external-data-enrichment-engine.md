@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | v1 (BBR-only) implemented, reviewed, and hardened — see [2026-08-17 review](../reviews/2026-08-17-engine-v1-review.md) |
+| Status | v1.1 implemented: BBR + coordinates + units + energy certificate + last sale price — see [2026-08-17 review](../reviews/2026-08-17-engine-v1-review.md) and implementation log |
 | Owner | Jonas Haahr |
 | Created | 2026-08-17 |
 | Last updated | 2026-08-17 |
@@ -40,17 +40,28 @@ into a client's Power BI/Business Central) should sit on top of this, not duplic
 - No caching/rate-limit infrastructure beyond simple politeness delays — current expected
   call volume (manual demos, low-volume client lookups) doesn't justify it yet.
 
-## Scope — v1 data sources (Real Estate)
+## Scope — v1.1 data sources (Real Estate)
 
-| Source | Registry | What it returns |
-|---|---|---|
-| Dataforsyningen (free, no auth) | Adresser | resolves a free-text address to an adgangsadresse ID + kommunekode |
-| Datafordeler.dk | BBR (Bygnings- og Boligregistret) | floor area, construction year, heating type, wall/roof material, floors |
+| Source | Registry | What it returns | Official? |
+|---|---|---|---|
+| Dataforsyningen (free, no auth) | Adresser | address resolution + adgangsadresse ID, kommunekode, WGS84 lon/lat | Yes |
+| Datafordeler.dk | BBR (Bygnings- og Boligregistret) | building fields (area, year, materials, heating) + per-unit breakdown | Yes, documented REST |
+| Datafordeler.dk | DAR_BFE_Public | husnummer → BFE number (join key for OIS) | Yes, documented REST |
+| tjekenergimaerke.emoweb.dk | Energimærke | current/historic energy certificate class | **No** — unofficial public search form, no auth. See `energimaerke.py` docstring. |
+| ois.dk | SVUR (via OIS) | most recent sale price + date | **No** — unofficial API, reverse-engineered (by `aarhus_re`, reused here). See `ois.py` docstring. |
 
 **CVR moved out of v1** (2026-08-17) — see the Open Questions log below. Deferred to
 when needed: Tinglysning (deeds/mortgages/easements — paid/restricted access, needs its
-own access-cost evaluation), Energistyrelsen energy certificates, PlanSystemDK zoning.
-Added the moment a demo or client engagement needs one of them, not before.
+own access-cost evaluation), PlanSystemDK zoning.
+
+**On the two unofficial sources**: energy certificate and sale-price data don't have a
+practical official/documented path (the real ones — EMOData, EJF via Datafordeler —
+need separate approval processes; see implementation log). Both are wired as
+best-effort (return `None` on failure rather than raising) specifically because
+they're not sanctioned APIs and could break on a markup/behavior change without
+notice — a demo showing "no data available" for one field is fine; a demo crashing
+because an unofficial scrape broke is not. Worth revisiting if either becomes
+business-critical rather than a demo enhancement.
 
 ## Functional requirements
 

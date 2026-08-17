@@ -56,6 +56,14 @@ if submitted and query:
                     dcol1.markdown(f"**{label}**")
                     dcol2.write(value or "Ukendt")
 
+            if profile.last_sale is not None:
+                st.markdown("&nbsp;")
+                s = profile.last_sale
+                price_str = f"{s.price_dkk:,}".replace(",", ".") + " kr."
+                scol1, scol2 = st.columns([1, 2])
+                scol1.metric("Seneste salg", price_str)
+                scol2.caption(f"{s.sale_date} — {s.sale_type}")
+
             if profile.energy_label is not None:
                 st.markdown("&nbsp;")
                 el = profile.energy_label

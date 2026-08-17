@@ -45,6 +45,14 @@ def test_shows_energy_label_when_available():
     assert metric_labels["Energimærke"] in {"A", "B", "C", "D", "E", "F", "G"}
 
 
+def test_shows_last_sale_price_when_available():
+    at = _run("Guldsmedgade 21, 8000 Aarhus")
+    assert not at.exception
+    metric_labels = {m.label: m.value for m in at.metric}
+    assert "Seneste salg" in metric_labels
+    assert "kr." in metric_labels["Seneste salg"]
+
+
 def test_not_found_shows_friendly_error_not_a_traceback():
     at = _run("Nonexistentgade 99999, 8000 Aarhus")
     assert not at.exception

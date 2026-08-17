@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | v1 implemented (`streamlit_app.py`), tested locally via `streamlit.testing.v1.AppTest` — not yet deployed/shared with a prospect |
+| Status | v1.1 implemented (`streamlit_app.py`): BBR fields, map, per-unit table, energy certificate, last sale price. Tested locally via `streamlit.testing.v1.AppTest` (22/22 suite) — not yet deployed/shared with a prospect |
 | Owner | Jonas Haahr |
 | Created | 2026-08-17 |
 | Last updated | 2026-08-17 |
@@ -44,14 +44,21 @@ Jutland — either found cold (CVR industry-code list) or in a live sales conver
 ## Functional requirements
 
 1. Single input field: Danish address.
-2. On submit, call the Enrichment Engine (PRD 01) and render BBR fields: floor area,
-   construction year, heating type, wall/roof material, floors.
-   (CVR/owning-entity lookup deferred — see PRD 01's 2026-08-17 log entry. Not a v1
-   demo field; add if/when CVR access is approved.)
+2. On submit, call the Enrichment Engine (PRD 01) and render:
+   - BBR fields: floor area, construction year, heating type, wall/roof material, floors.
+   - Map pin (from address coordinates).
+   - Per-unit table when the building has separately registered units.
+   - Most recent sale price + date, when available (best-effort — unofficial source).
+   - Energy certificate class, when available (best-effort — unofficial source).
+   (CVR/owning-entity lookup still deferred — see PRD 01's 2026-08-17 log entry. Not a
+   v1 demo field; add if/when CVR access is approved.)
 3. Plain, clean, legible read-only output — a table or simple card layout. No editing,
-   no export, no saved history for v1.
+   no export, no saved history for v1. Text fields must not truncate (caught and fixed
+   2026-08-17 — `st.metric` isn't suited to descriptive text).
 4. Graceful handling of "not found" / API errors (still needs to look credible in a
-   live demo — a stack trace on screen kills the pitch).
+   live demo — a stack trace on screen kills the pitch). The two best-effort fields
+   (energy certificate, sale price) simply omit their section rather than error when
+   unavailable, since their sources are unofficial and expected to occasionally miss.
 
 ## Architecture
 

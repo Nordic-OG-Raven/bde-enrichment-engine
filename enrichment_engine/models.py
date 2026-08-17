@@ -53,8 +53,16 @@ class EnergyLabel:
 
 
 @dataclass
+class SaleRecord:
+    price_dkk: int
+    sale_date: str
+    sale_type: str
+
+
+@dataclass
 class PropertyProfile:
     address: ResolvedAddress
     building: BuildingProfile | None
     units: list[Unit]
     energy_label: EnergyLabel | None
+    last_sale: SaleRecord | None

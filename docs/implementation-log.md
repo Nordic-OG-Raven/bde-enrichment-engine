@@ -14,17 +14,22 @@ in place every time it changes; never edit past entries in the Log — add a new
   ehmidt.dk (email inbox, LinkedIn URL, hourly rate, reference). Onboarding
   webinar deadline: **2026-11-17**.
 - **Clients: zero.** Fully pre-revenue.
-- **Product 1, Enrichment Engine — v1 (BBR-only) done, reviewed, hardened.**
+- **Product 1, Enrichment Engine — v1.1, done, reviewed, hardened, expanded.**
   `enrichment_engine/` resolves a free-text Danish address (Dataforsyningen,
-  free/no auth) to a normalized `PropertyProfile` with BBR building data,
-  decoded to human-readable Danish labels. Typed exceptions, 429 retry/backoff,
-  `.env` chmod 600, 7 unit tests. Details:
-  [2026-08-17 review](reviews/2026-08-17-engine-v1-review.md). Run via
-  `python scripts/lookup_address.py "<address>"`.
-- **Product 2, Streamlit Demo — v1 done, tested locally, not yet deployed.**
-  `streamlit_app.py`: single address input, decoded BBR metrics, clean
-  not-found/ambiguous handling. Verified with 3 `streamlit.testing.v1.AppTest`
-  cases (no manual-only eyeballing). Full suite: **10/10 passing**. Run via
+  free/no auth) to a normalized `PropertyProfile` with: BBR building data
+  (decoded labels), WGS84 coordinates, per-unit breakdown, energy certificate
+  class, and most recent sale price. Typed exceptions for the official-source
+  path (BBR/address/BFE); the two unofficial sources (energy cert, sale price)
+  are best-effort and return `None` on failure rather than raising — see PRD 01
+  for why. `.env` chmod 600, 16 unit tests. Details:
+  [2026-08-17 review](reviews/2026-08-17-engine-v1-review.md) (original
+  hardening pass) plus the 2026-08-17 "value expansion" log entry below (new
+  data sources). Run via `python scripts/lookup_address.py "<address>"`.
+- **Product 2, Streamlit Demo — v1.1, tested locally, not yet deployed.**
+  `streamlit_app.py`: address input, decoded BBR metrics (no truncation — fixed
+  same day), map pin, units table, energy certificate, last sale price, clean
+  not-found/ambiguous handling. Verified with `streamlit.testing.v1.AppTest`
+  (no manual-only eyeballing). Full suite: **22/22 passing**. Run via
   `streamlit run streamlit_app.py`. **Not yet deployed or shown to a prospect.**
 - **CVR is out of v1 scope, and currently blocked at the infrastructure level.**
   Only the `CVRPerson` entity is access-restricted (confirmed from
@@ -50,11 +55,14 @@ in place every time it changes; never edit past entries in the Log — add a new
 
 1. **Deploy `streamlit_app.py` to Streamlit Community Cloud** — built and
    tested locally, not yet live anywhere. The actual next step toward a
-   shareable URL per PRD 02's success criteria. Note for when this happens: if
-   the demo ever needs live `CVRPerson`/IP-gated calls in the future, the
-   host's outbound IP will need registering too, and free tiers often don't
-   offer a fixed IP — not a v1 problem (BBR-only, no IP-gated calls), but don't
-   assume local-dev access implies deployed access later.
+   shareable URL per PRD 02's success criteria. Two things worth checking once
+   it's live, not before: (a) if the demo ever needs live `CVRPerson`/IP-gated
+   calls in the future, the host's outbound IP will need registering too, and
+   free tiers often don't offer a fixed IP; (b) the energy-certificate and
+   sale-price sources are unofficial scrapes (see PRD 01) — worth a quick
+   re-check that they still work once running from a different outbound IP
+   (Streamlit Cloud's, not this machine's), in case the target sites behave
+   differently for unfamiliar traffic.
 2. **Get the demo in front of one real prospect** — the actual end goal,
    blocked only on (1).
 3. Wait on Datafordeler support's reply re: the non-authenticating API-key,
@@ -72,6 +80,71 @@ in place every time it changes; never edit past entries in the Log — add a new
 ---
 
 ## Log
+
+### 2026-08-17 — Value-proposition expansion: map, units, energy certificate, sale price
+
+Prompted by actually looking at a live screenshot of the demo and asking whether
+the current scope left value on the table. Answer: yes, some cheaply. Added four
+things, in order, each live-tested against real addresses before being trusted:
+
+**Fixed first (not scope creep — a bug in existing scope):** `st.metric` was
+silently truncating long text values ("Etagebolig-bygning, …") with no way to
+see the full text. Numeric fields (year, area, floors) kept `st.metric`; text
+fields (use, materials, heating) moved to a plain label/value layout that
+doesn't truncate. New test asserts no `…` appears in rendered output.
+
+**Map pin**: `Dataforsyningen`'s `/adresser` response already returns
+`adgangspunkt.koordinater` as `[lon, lat]` in WGS84 directly — no need for
+BBR's projected-coordinate parsing (`aarhus_re` needed a UTM→WGS84 conversion;
+we don't, since we're not using BBR's coordinate field at all). One `st.map()`
+call.
+
+**Per-unit breakdown**: hit two real bugs live-testing against BBR, both
+caught by actually running it rather than trusting `aarhus_re`'s April
+reference code:
+1. BBR's `Enhed` endpoint rejects a `husnummer` filter outright (`400 -
+   "Parameter: husnummer unrecognized. Did you mean: id?"`) — needs `bygning`
+   (the building's `id_lokalId`) instead. Worse, an address can have *multiple*
+   historical `Bygning` records, and only some of those ids have linked
+   `Enhed` records — our building-selection heuristic doesn't necessarily pick
+   the "right" one for this purpose, so unit lookup now queries every building
+   id for the address and combines non-empty results.
+2. The actual field names have drifted since April: `enh026EnhedensSamledeAreal`
+   / `enh027ArealTilBeboelse` today, not the `enh024`/`enh023` `aarhus_re` used.
+   Silent schema drift on a REST API that's being phased out — a second data
+   point (after the BBR credential's own near-miss) that precedent code from
+   this same source needs re-verifying live, not trusting at face value.
+
+**Energy certificate**: the sanctioned path (Energistyrelsen's EMOData API)
+needs a separate approval request (sparenergi@ens.dk) — not pursued. Reused
+`aarhus_re`'s already-validated workaround instead:
+`tjekenergimaerke.emoweb.dk`'s public search form (CSRF token GET + POST, no
+auth, no formal API). Live-retested before building on it — same HTML column
+layout as their April code, still works.
+
+**Sale price** — the one initially assumed to be hard. It isn't, once you know
+the actual mechanism: `aarhus_re` got real SVUR (Statens Salgs- og
+Vurderingsregister — the same authoritative register as EJF) transaction data
+via `ois.dk/api/svur/get?bfe=`, a public API needing **no authentication**
+beyond a browser-like `Referer` header — found by reverse-engineering OIS's
+frontend, not the heavy MitID-Erhverv/Datafordeler path first assumed. The
+real gap was resolving an address to a **BFE number** on demand: `aarhus_re`
+only ever had this via a bulk offline MATRIKLEN2 file dump, not a live
+lookup. Solved with a second, *official* Datafordeler service found via
+research: `DAR_BFE_Public`'s `husnummerTilBygningBfe` REST method, same
+tjenestebruger auth as BBR — confirmed live end-to-end (address → husnummer →
+BFE `5622711` → a real 2020 sale, 28.500.000 DKK, "Almindelig frit salg").
+
+**Design choice applied to both new sources**: unlike `bbr.py`'s typed
+exceptions, `energimaerke.py` and `ois.py`/`bfe.py` are best-effort — return
+`None` on any failure rather than raising. These are unofficial,
+unsanctioned-format sources that could break on a markup change without
+notice; a demo silently omitting one bonus field is fine, a demo crashing
+because a scrape broke is not. Worth revisiting if either becomes
+business-critical rather than a demo enhancement — see PRD 01.
+
+Full suite: 22/22 passing, including new parsing tests against synthetic
+fixtures (not just live-network dependence) for both new modules.
 
 ### 2026-08-17 — API-key doesn't authenticate against any service; escalated to Datafordeler support
 
