@@ -1,0 +1,44 @@
+Datafordeler support - teknisk bilag
+IT-system: bde-enrichment-engine
+Bruger: Jonas Haahr, Nordic Raven Solutions, CVR 46097750
+API-Key: local-dev (oprettet 17-08-2026 kl. 15:11:16, status "Aktiv" i Administration,
+udløbsdato 17-08-2028)
+Registreret IP på IT-system: 83.94.224.228/32
+
+Alle test kørt 35+ minutter efter nøglens oprettelsestidspunkt (jf. IT-systemets eget
+revisionslog), dvs. efter jeres oplyste 15-minutters aktiveringsvindue.
+
+--- Test 1 ---
+POST https://graphql.datafordeler.dk/CVR/v1
+Header: Authorization: apikey <min API-Key>
+Header: Content-Type: application/json
+Body: {"query":"{ __schema { queryType { fields { name } } } }"}
+Resultat: HTTP 401, tomt response body
+
+--- Test 2 ---
+Samme som Test 1, men mod https://graphql.datafordeler.dk/CVR/v3
+Resultat: HTTP 401, tomt response body
+
+--- Test 3 ---
+Nøgle som URL query-parameter i stedet for header:
+https://graphql.datafordeler.dk/CVR/v1?apiKey=<min API-Key>
+https://graphql.datafordeler.dk/CVR/v1?apikey=<min API-Key>
+Afprøvet både som GET og POST.
+Resultat: HTTP 404 (rute ikke fundet) i alle tilfælde.
+
+--- Test 4 (afgørende test) ---
+For at udelukke at fejlen er specifik for CVR-registret, gentog jeg jeres eget
+dokumenterede eksempel (fra jeres offentlige dokumentation for DAR GraphQL) helt
+præcist, mod DAR i stedet for CVR - et andet, ikke-adgangsbegrænset register:
+
+POST https://graphql.datafordeler.dk/DAR/v1
+Header: Authorization: apikey <min API-Key>
+Header: Content-Type: application/json
+Body: {"query":"{ __typename }"}
+Resultat: HTTP 401, tomt response body
+
+--- Konklusion ---
+Da jeres eget dokumenterede eksempel (Test 4) fejler identisk med det, jeg selv
+har afprøvet mod CVR, formoder jeg at problemet ikke er en fejl i min brug af
+API-nøglen, men derimod noget galt med selve nøglens/kontoens provisionering på
+jeres side - på trods af at Administration viser nøglen som "Aktiv".
