@@ -25,11 +25,13 @@ in place every time it changes; never edit past entries in the Log — add a new
   [2026-08-17 review](reviews/2026-08-17-engine-v1-review.md) (original
   hardening pass) plus the 2026-08-17 "value expansion" log entry below (new
   data sources). Run via `python scripts/lookup_address.py "<address>"`.
-- **Product 2, Streamlit Demo — v1.1, tested locally, not yet deployed.**
-  `streamlit_app.py`: address input, decoded BBR metrics (no truncation — fixed
-  same day), map pin, units table, energy certificate, last sale price, clean
+- **Product 2, Streamlit Demo — v1.1, tested locally and confirmed working by
+  the user in a real browser, not yet deployed.** `streamlit_app.py`: address
+  input, decoded BBR metrics (no truncation — fixed same day), server-rendered
+  OSM map image (not `st.map()` — dropped after it silently failed without
+  WebGL), units table, energy certificate, last sale price, clean
   not-found/ambiguous handling. Verified with `streamlit.testing.v1.AppTest`
-  (no manual-only eyeballing). Full suite: **22/22 passing**. Run via
+  plus actual manual use. Full suite: **26/26 passing**. Run via
   `streamlit run streamlit_app.py`. **Not yet deployed or shown to a prospect.**
 - **CVR is out of v1 scope, and currently blocked at the infrastructure level.**
   Only the `CVRPerson` entity is access-restricted (confirmed from
