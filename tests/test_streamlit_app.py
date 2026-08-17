@@ -9,13 +9,19 @@ def _run(address: str) -> AppTest:
     return at
 
 
-def test_happy_path_shows_building_metrics():
+def test_happy_path_shows_building_metrics_and_untruncated_details():
     at = _run("Ryesgade 1, 8000 Aarhus")
     assert not at.exception
     assert not at.error
     metric_labels = [m.label for m in at.metric]
     assert "Opførelsesår" in metric_labels
-    assert "Anvendelse" in metric_labels
+
+    markdown_text = " ".join(m.value for m in at.markdown)
+    write_text = " ".join(str(w.value) for w in at.get("write"))
+    assert "Anvendelse" in markdown_text
+    # The full label text should be present, not cut off with an ellipsis -
+    # this is the truncation bug the st.metric layout had.
+    assert "…" not in write_text
 
 
 def test_not_found_shows_friendly_error_not_a_traceback():

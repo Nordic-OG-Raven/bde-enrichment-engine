@@ -39,16 +39,22 @@ if submitted and query:
                 st.info("Adressen blev fundet, men vi har ingen BBR-oplysninger for denne bygning.")
             else:
                 b = profile.building
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("Opførelsesår", b.year_built or "Ukendt")
-                    st.metric("Samlet areal", f"{b.total_area_sqm} m²" if b.total_area_sqm else "Ukendt")
-                    st.metric("Etager", b.floors or "Ukendt")
-                with col2:
-                    st.metric("Anvendelse", b.use_label or "Ukendt")
-                    st.metric("Ydervæg", b.wall_material_label or "Ukendt")
-                    st.metric("Tag", b.roof_material_label or "Ukendt")
-                st.metric("Varmeinstallation", b.heating_type_label or "Ukendt")
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Opførelsesår", b.year_built or "Ukendt")
+                col2.metric("Samlet areal", f"{b.total_area_sqm} m²" if b.total_area_sqm else "Ukendt")
+                col3.metric("Etager", b.floors or "Ukendt")
+
+                st.markdown("&nbsp;")
+                detail_rows = [
+                    ("Anvendelse", b.use_label),
+                    ("Ydervæg", b.wall_material_label),
+                    ("Tag", b.roof_material_label),
+                    ("Varmeinstallation", b.heating_type_label),
+                ]
+                for label, value in detail_rows:
+                    dcol1, dcol2 = st.columns([1, 2])
+                    dcol1.markdown(f"**{label}**")
+                    dcol2.write(value or "Ukendt")
 
 st.divider()
 st.caption("Big Data Energy — ekstern databerigelse for danske SME'er. Nordic Raven Solutions.")
