@@ -34,6 +34,8 @@ def resolve(query: str) -> ResolvedAddress:
 
     match = results[0]
     adgangsadresse = match["adgangsadresse"]
+    koordinater = (adgangsadresse.get("adgangspunkt") or {}).get("koordinater")
+    lon, lat = koordinater if koordinater else (None, None)
 
     # Multiple results are normal for a multi-unit building - /adresser returns
     # one row per floor/door, all sharing the same adgangsadresse (building).
@@ -52,5 +54,7 @@ def resolve(query: str) -> ResolvedAddress:
         postnummer=adgangsadresse["postnummer"]["nr"],
         vejnavn=adgangsadresse["vejstykke"]["navn"],
         husnr=adgangsadresse["husnr"],
+        lon=lon,
+        lat=lat,
         ambiguous=ambiguous,
     )

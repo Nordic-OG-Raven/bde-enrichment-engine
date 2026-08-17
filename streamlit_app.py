@@ -56,5 +56,26 @@ if submitted and query:
                     dcol1.markdown(f"**{label}**")
                     dcol2.write(value or "Ukendt")
 
+            if profile.address.lat is not None and profile.address.lon is not None:
+                st.markdown("&nbsp;")
+                st.map([{"lat": profile.address.lat, "lon": profile.address.lon}], size=30)
+
+            if profile.units:
+                st.markdown("&nbsp;")
+                st.subheader(f"Enheder ({len(profile.units)})")
+                st.dataframe(
+                    [
+                        {
+                            "Anvendelse": u.use_label or "Ukendt",
+                            "Boligareal": f"{u.living_area_sqm} m²" if u.living_area_sqm else "Ukendt",
+                            "Samlet areal": f"{u.total_area_sqm} m²" if u.total_area_sqm else "Ukendt",
+                            "Værelser": u.num_rooms if u.num_rooms is not None else "Ukendt",
+                        }
+                        for u in profile.units
+                    ],
+                    hide_index=True,
+                    use_container_width=True,
+                )
+
 st.divider()
 st.caption("Big Data Energy — ekstern databerigelse for danske SME'er. Nordic Raven Solutions.")

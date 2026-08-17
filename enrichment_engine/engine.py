@@ -14,5 +14,9 @@ def property_profile(address_query: str) -> PropertyProfile:
     displaying differently to a user."""
     resolved = address.resolve(address_query)
     building = bbr.lookup(resolved.adgangsadresse_id)
-    log.info("Profile built for %r: building_found=%s", address_query, building is not None)
-    return PropertyProfile(address=resolved, building=building)
+    units = bbr.lookup_units(resolved.adgangsadresse_id)
+    log.info(
+        "Profile built for %r: building_found=%s, units=%d",
+        address_query, building is not None, len(units),
+    )
+    return PropertyProfile(address=resolved, building=building, units=units)

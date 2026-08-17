@@ -10,6 +10,8 @@ class ResolvedAddress:
     postnummer: str
     vejnavn: str
     husnr: str
+    lon: float | None = None
+    lat: float | None = None
     ambiguous: bool = False
 
 
@@ -32,6 +34,17 @@ class BuildingProfile:
 
 
 @dataclass
+class Unit:
+    bbr_unit_id: str
+    use_code: str | None
+    use_label: str | None
+    living_area_sqm: int | None
+    total_area_sqm: int | None
+    num_rooms: int | None
+
+
+@dataclass
 class PropertyProfile:
     address: ResolvedAddress
     building: BuildingProfile | None
+    units: list[Unit]
