@@ -79,9 +79,9 @@ in place every time it changes; never edit past entries in the Log — add a new
 
 ## Next actions
 
-1. Build a `cvr.py` module for basic (non-`CVRPerson`) company lookup — confirmed
-   unrestricted, no approval wait needed. Worth doing before or alongside the
-   Streamlit demo since it's now unblocked.
+1. ~~Build a `cvr.py` module for basic (non-`CVRPerson`) company lookup~~ **On
+   hold** — API-key doesn't authenticate at all (see 2026-08-17 log entries).
+   Datafordeler support ticket submitted; blocked on their response.
 2. Build the Streamlit demo (PRD 02) on top of the working engine. **Before/when
    deploying it to a cloud host** (Streamlit Community Cloud per PRD 02): if the
    demo ever needs live calls to `CVRPerson` or any other OAuth/IP-whitelisted
@@ -177,6 +177,18 @@ audience):
 
 Not blocking BBR work (unaffected, separate credential/system) — only blocks
 `cvr.py`, which is now on hold pending support's response.
+
+**Update, same day — ticket actually submitted.** Used the "Indberette en fejl"
+(report an error) form, not "Stille et spørgsmål" — it has a dedicated 401/403
+checkbox and fields built for exactly this situation. Submitted with: Register =
+CVR (chosen over "Ingen" so it lands with an owner, even though the bug is
+provably account-wide, not CVR-specific — the attached repro file makes that
+clear regardless), error code 401, checkbox checked, IP 83.94.224.228, failing
+URL `https://graphql.datafordeler.dk/CVR/v1`, exact repro timestamp 17-08-2026
+15:46 CEST, certificate field marked not applicable (API-key auth, not OAuth
+certificate). Full technical repro attached as
+`docs/reference/datafordeler-support-attachment-2026-08-17.txt`. Now waiting on
+Datafordeler; `cvr.py` stays on hold until they respond.
 
 ### 2026-08-17 — Confirmed CVR access tiers from Datafordeler's own guidance; applying for CVRPerson anyway
 
