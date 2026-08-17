@@ -27,14 +27,15 @@ def test_happy_path_shows_building_metrics_and_untruncated_details():
     assert "…" not in write_text
 
 
-def test_multi_unit_building_shows_map_and_units_table():
+def test_multi_unit_building_shows_map_image_link_and_units_table():
     at = _run("Guldsmedgade 21, 8000 Aarhus")
     assert not at.exception
     assert not at.error
-    assert len(at.get("deck_gl_json_chart") + at.get("map")) >= 1  # st.map renders as one of these
-    # Plain link fallback - can't fail the way a tile-loading JS map can, so
-    # this should always be present whenever coordinates are available,
-    # independent of whether st.map's own rendering works in a given browser.
+    # Server-rendered PNG (st.image), not st.map() - dropped 2026-08-17 after
+    # confirming live that st.map()/deck.gl silently renders blank when
+    # WebGL is unavailable (common on locked-down corporate machines -
+    # exactly the kind of device a real prospect might be viewing this on).
+    assert len(at.get("imgs")) == 1
     markdown_text = " ".join(m.value for m in at.markdown)
     assert "Google Maps" in markdown_text
     subheader_text = " ".join(s.value for s in at.subheader)

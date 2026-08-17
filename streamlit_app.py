@@ -5,6 +5,7 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from enrichment_engine import staticmap
 from enrichment_engine.engine import property_profile
 from enrichment_engine.exceptions import AddressLookupError, AddressNotFoundError, BBRLookupError
 
@@ -75,8 +76,10 @@ if submitted and query:
             if profile.address.lat is not None and profile.address.lon is not None:
                 st.markdown("&nbsp;")
                 lat, lon = profile.address.lat, profile.address.lon
-                st.markdown(f"[Åbn i Google Maps](https://www.google.com/maps?q={lat},{lon})")
-                st.map([{"lat": lat, "lon": lon}], size=30, zoom=15)
+                map_png = staticmap.render(lon, lat)
+                if map_png is not None:
+                    st.image(map_png)
+                st.markdown(f"📍 [Åbn i Google Maps](https://www.google.com/maps?q={lat},{lon})")
 
             if profile.units:
                 st.markdown("&nbsp;")

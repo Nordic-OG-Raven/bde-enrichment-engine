@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | v1.1 implemented (`streamlit_app.py`): BBR fields, map, per-unit table, energy certificate, last sale price. Tested locally via `streamlit.testing.v1.AppTest` (22/22 suite) — not yet deployed/shared with a prospect |
+| Status | v1.1 implemented (`streamlit_app.py`): BBR fields, map image, per-unit table, energy certificate, last sale price. Tested locally via `streamlit.testing.v1.AppTest` (26/26 suite) — not yet deployed/shared with a prospect |
 | Owner | Jonas Haahr |
 | Created | 2026-08-17 |
 | Last updated | 2026-08-17 |
@@ -46,7 +46,10 @@ Jutland — either found cold (CVR industry-code list) or in a live sales conver
 1. Single input field: Danish address.
 2. On submit, call the Enrichment Engine (PRD 01) and render:
    - BBR fields: floor area, construction year, heating type, wall/roof material, floors.
-   - Map pin (from address coordinates).
+   - Map image centered on the address (server-rendered from OpenStreetMap
+     tiles, not `st.map()`/`deck.gl` — that was dropped after confirming it
+     silently renders blank without WebGL, common on locked-down corporate
+     machines; see implementation log, 2026-08-17), plus a Google Maps link.
    - Per-unit table when the building has separately registered units.
    - Most recent sale price + date, when available (best-effort — unofficial source).
    - Energy certificate class, when available (best-effort — unofficial source).

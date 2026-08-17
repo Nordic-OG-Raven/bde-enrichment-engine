@@ -81,6 +81,49 @@ in place every time it changes; never edit past entries in the Log — add a new
 
 ## Log
 
+### 2026-08-17 — Dropped st.map() after confirming it silently fails without WebGL
+
+Caught by the user actually looking at the running demo (not by any test —
+`streamlit.testing.v1.AppTest` confirmed the map *element* gets created but
+can't detect whether it visually renders, since it doesn't run a real
+browser). First guess (missing `zoom` causing an over-zoomed-out, invisible
+pin) was wrong — real cause, confirmed via browser console: `st.map()` is
+built on `deck.gl`, which needs WebGL, and it fails **silently** (blank
+space, no error surfaced to Streamlit or the user) when WebGL is unavailable
+(`GL_VENDOR = Disabled`, `Sandboxed = yes` in this case).
+
+This matters beyond just this bug: **locked-down corporate machines commonly
+disable hardware acceleration**, which is exactly the kind of device a real
+prospect might view this demo on. A feature that blank-fails silently for an
+unknown fraction of viewers, with no error to notice, is worse than not
+having it. First fix was a plain markdown link to Google Maps (no JS map
+library, no WebGL - can't fail this way) — but pushed to do better, since we
+already have the coordinates and a link-out isn't really "showing" anything.
+
+**Better fix, same day: `enrichment_engine/staticmap.py`** — renders a map
+image server-side from raw OpenStreetMap tiles (`tile.openstreetmap.org`,
+standard slippy-map tile math, stitched + cropped + a marker drawn with
+Pillow) and serves it as a plain PNG via `st.image()`. No WebGL, no JS map
+library at all — just an `<img>` tag, which works anywhere image rendering
+works. Verified visually (not just "no exception") by actually opening the
+rendered PNG: correctly centered, marker sits precisely on the right street.
+Used under OSM's tile usage policy (identifying User-Agent, single-lookup
+volume, no caching/bulk use) rather than a third-party "static maps"
+wrapper API — tried one first (`staticmap.openstreetmap.de`), found it no
+longer resolves, went to OSM's own tile server directly instead of trusting
+another unverified wrapper.
+
+Kept the Google Maps link alongside the image (not replaced) — the image is
+a fixed snapshot, the link gives pan/zoom/street view for anyone who wants
+to explore further. 4 new tests for the pure pixel-math (network-independent),
+1 new Streamlit test. Full suite 26/26.
+
+**General takeaway for future additions**: prefer widgets with no
+GPU/JS-rendering dependency where a plain fallback exists, or at minimum
+verify visually (not just via AppTest, which only checks the element tree)
+before trusting a rendering-heavy Streamlit component for something
+prospect-facing.
+
 ### 2026-08-17 — Value-proposition expansion: map, units, energy certificate, sale price
 
 Prompted by actually looking at a live screenshot of the demo and asking whether
