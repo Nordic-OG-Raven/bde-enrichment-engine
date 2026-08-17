@@ -21,10 +21,18 @@ in place every time it changes; never edit past entries in the Log — add a new
   Run via `python scripts/lookup_address.py "<address>"` (venv at `.venv/`, prod deps
   in `requirements.txt`, dev+test deps in `requirements-dev.txt`, credentials in
   `.env` — gitignored, chmod 600).
-- **One finding deliberately left open**: the BBR credential is shared, undocumented
-  infrastructure with the unrelated `aarhus_re` project — no code fix without
-  registering BDE's own Datafordeler account, which is its own signup/approval flow.
-  Queued below, not blocking.
+- **Dedicated BDE Datafordeler Administration account now exists** (owner: Jonas
+  Haahr, org: Nordic Raven Solutions, CVR 46097750), with its own IT-system
+  (`bde-enrichment-engine`) holding an API-key and an OAuth Shared Secret — see the
+  dated log entry below for full metadata. This is groundwork for CVR, not yet a fix
+  for the BBR finding: Datafordeler Administration's own copy describes API-keys/
+  OAuth as granting access "via Fildownload (HTTPS) og GraphQL" — a different auth
+  model from the legacy REST endpoints `bbr.py` currently calls. So the BBR credential
+  is still shared with `aarhus_re` for now; this new account unblocks CVR specifically,
+  not a drop-in BBR replacement. Needs confirming either way before assuming otherwise.
+  **No actual CVR data access yet** — the portal's "Dataadgang" (data access requests)
+  section is empty; credentials alone don't grant access to protected register data,
+  an explicit request still has to be submitted and approved there.
 - Open question 1 (Datafordeler.dk auth) resolved for BBR: a working tjenestebruger
   account already exists, reused from the `aarhus_re` project (at
   `/Users/jonas/aarhus_re`), live-tested — HTTP 200, confirmed working.
@@ -62,19 +70,57 @@ in place every time it changes; never edit past entries in the Log — add a new
 ## Next actions
 
 1. Build the Streamlit demo (PRD 02) on top of the working engine.
-2. Submit the free CVR access request (MitID Erhverv + OAuth via Datafordeler
-   Administration) in parallel — not blocking, but has lead time.
-3. Get the demo in front of one real prospect.
-4. Register a dedicated BDE Datafordeler tjenestebruger account, so this project
-   stops depending on a credential shared with (and owned by) `aarhus_re` — see
-   the 2026-08-17 review, finding 2. Not blocking, but worth doing before any real
-   client traffic runs through this.
-5. (Optional, not blocking) Cheap pricing check on BoligIQ/Accobat, mostly to settle
+2. In Datafordeler Administration → `bde-enrichment-engine` → **Dataadgang**, submit
+   an access request for the CVR register/entity actually needed (start with basic
+   company data; only reach for the restricted `CVRPerson` entity if ownership data
+   turns out to be necessary). Nothing CVR-related works until this is approved.
+3. Confirm whether the new API-key/OAuth credentials authenticate against BBR/CVR
+   REST endpoints too, or are GraphQL/Fildownload-only as Administration's own copy
+   suggests — decides whether a future `cvr.py` can reuse `bbr.py`'s REST pattern or
+   needs a GraphQL client instead.
+4. If the CVR access request ends up needing OAuth (protected data), register a
+   whitelisted IP address in Administration's **IP-adresser** tab — flag that a home
+   broadband IP is often dynamic, worth checking before assuming this is a one-time step.
+5. Get the demo in front of one real prospect.
+6. Decouple the BBR REST credential from `aarhus_re` (2026-08-17 review, finding 2) —
+   still open; the new Administration account doesn't cover this per item 3 above.
+7. (Optional, not blocking) Cheap pricing check on BoligIQ/Accobat, mostly to settle
    the build-vs-buy question fully rather than because it's needed.
 
 ---
 
 ## Log
+
+### 2026-08-17 — Set up a dedicated Datafordeler Administration account for CVR
+
+The old-style Webbruger/Tjenestebruger signup (same model as the shared BBR
+credential) is explicitly being phased out end of 2026 — Datafordeler's own login
+page now tells new signups to use **Administration** with API-key/OAuth instead.
+Registered there (email login tied to Jonas Haahr / Nordic Raven Solutions, CVR
+46097750, rights: Ejer/Owner) and created a new, purpose-specific IT-system:
+
+- **IT-system**: `bde-enrichment-engine`
+- **API-key** (for free/open data): named `local-dev`, active, expires 2028-08-17.
+- **OAuth Shared Secret** (for protected/confidential data, if needed): named
+  `local-dev-secret`, Client ID `2d4f59b7-1593-4f91-a29c-7170a3783134`, active,
+  expires 2028-08-16.
+- Both stored in `.env` only (chmod 600, gitignored) — raw values are **not** in
+  this log, any other doc, or git history. Metadata only, by design: don't repeat
+  the `aarhus_re` pattern of hardcoding a real secret as a source-code default.
+- **OAuth Certifikat** and **IP-adresser**: both empty, untouched — no certificate
+  or IP whitelisting set up yet. Only relevant if the CVR data actually needed
+  turns out to require the protected/OAuth path (see next actions).
+- **Dataadgang** (access requests for protected register data): empty. Having
+  credentials doesn't grant data access by itself — a request still has to be
+  submitted per-register/entity and approved before any CVR lookup will return data.
+
+Net effect: CVR groundwork (account + credentials) is in place, but **no CVR data
+is accessible yet** — the access request is the actual next blocking step, not
+anything code-side. Also clarified this account's scope doesn't (yet, or maybe at
+all) cover BBR: Administration's own description of API-key/OAuth access is "via
+Fildownload (HTTPS) og GraphQL," which reads as a different service surface than
+the classic REST endpoints `bbr.py` currently calls — needs confirming before
+assuming this new account can ever replace the shared `aarhus_re` BBR credential.
 
 ### 2026-08-17 — Adversarial self-review of the v1 engine; 13 findings, 12 fixed
 
