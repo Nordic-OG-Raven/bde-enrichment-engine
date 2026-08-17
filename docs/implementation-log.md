@@ -33,10 +33,16 @@ in place every time it changes; never edit past entries in the Log — add a new
   **Update, same day, confirmed from Datafordeler's own access guidance**: only the
   `CVRPerson` entity is access-restricted. Every other CVR entity (basic company
   data) is unrestricted and already fetchable with the existing credentials — no
-  Dataadgang request needed for that. A `CVRPerson` request is being submitted
-  anyway (see log entry below) for future ownership-tracing value, not because
-  basic company lookup needs it. Full guidance captured at
+  Dataadgang request needed for that. Full guidance captured at
   [docs/reference/datafordeler-access.md](reference/datafordeler-access.md).
+  **`CVRPerson` access request: submitted 2026-08-17, status "Ny" (pending), no
+  attachment included** — the guidance never called for one and the form didn't
+  mark it required, so none was sent. Small residual risk Erhvervsstyrelsen asks
+  for more information before approving; low-effort to supply if/when they do,
+  not worth pre-empting with a document to a spec we don't actually have. IP
+  `83.94.224.228` (this machine's current network) registered as `/32` on the
+  IT-system — required before Datafordeler would even accept a Dataadgang request,
+  not documented anywhere until the portal's own error surfaced it.
 - Open question 1 (Datafordeler.dk auth) resolved for BBR: a working tjenestebruger
   account already exists, reused from the `aarhus_re` project (at
   `/Users/jonas/aarhus_re`), live-tested — HTTP 200, confirmed working.
@@ -76,9 +82,16 @@ in place every time it changes; never edit past entries in the Log — add a new
 1. Build a `cvr.py` module for basic (non-`CVRPerson`) company lookup — confirmed
    unrestricted, no approval wait needed. Worth doing before or alongside the
    Streamlit demo since it's now unblocked.
-2. Build the Streamlit demo (PRD 02) on top of the working engine.
-3. `CVRPerson` Dataadgang request submitted 2026-08-17 (see log) — check back for
-   approval; not blocking anything else in the meantime.
+2. Build the Streamlit demo (PRD 02) on top of the working engine. **Before/when
+   deploying it to a cloud host** (Streamlit Community Cloud per PRD 02): if the
+   demo ever needs live calls to `CVRPerson` or any other OAuth/IP-whitelisted
+   Datafordeler service, that host's outbound IP will need registering on the
+   IT-system too — and free hosting tiers often don't give a fixed IP, which could
+   be a real obstacle, not just paperwork. Not a problem yet (local dev only,
+   and the v1 demo doesn't use CVR at all), but don't assume "it works locally"
+   implies "it'll work once deployed" for anything IP-gated.
+3. `CVRPerson` Dataadgang request: submitted 2026-08-17, status "Ny" — check back
+   for approval; not blocking anything else in the meantime.
 4. Confirm whether the Administration API-key/OAuth credentials authenticate
    against classic REST endpoints too, or are GraphQL/Fildownload-only as
    Administration's own copy suggests — decides whether `cvr.py` can reuse
