@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Draft |
+| Status | v1 (BBR-only) implemented, address+BBR lookup tested end-to-end |
 | Owner | Jonas Haahr |
 | Created | 2026-08-17 |
 | Last updated | 2026-08-17 |
@@ -44,12 +44,13 @@ into a client's Power BI/Business Central) should sit on top of this, not duplic
 
 | Source | Registry | What it returns |
 |---|---|---|
-| Datafordeler.dk | BBR (Bygnings- og Boligregistret) | floor area, construction year, heating type, usage classification |
-| Datafordeler.dk | CVR (Det Centrale Virksomhedsregister) | company lookup, ownership |
+| Dataforsyningen (free, no auth) | Adresser | resolves a free-text address to an adgangsadresse ID + kommunekode |
+| Datafordeler.dk | BBR (Bygnings- og Boligregistret) | floor area, construction year, heating type, wall/roof material, floors |
 
-Deferred to when needed: Tinglysning (deeds/mortgages/easements — paid/restricted access,
-needs its own access-cost evaluation), Energistyrelsen energy certificates, PlanSystemDK
-zoning. Added the moment a demo or client engagement needs one of them, not before.
+**CVR moved out of v1** (2026-08-17) — see the Open Questions log below. Deferred to
+when needed: Tinglysning (deeds/mortgages/easements — paid/restricted access, needs its
+own access-cost evaluation), Energistyrelsen energy certificates, PlanSystemDK zoning.
+Added the moment a demo or client engagement needs one of them, not before.
 
 ## Functional requirements
 
@@ -98,9 +99,19 @@ zoning. Added the moment a demo or client engagement needs one of them, not befo
   project) — username/password as query params, live-tested against
   `BBR/BBRPublic/1/REST/Bygning` today, returns HTTP 200. Rate limit observed
   previously: 429 with `Retry-After`, 2s between paged requests was sufficient.
-  **Still open for CVR**: the existing account has never been used against a CVR
-  endpoint — auth mechanism, whether the same tjenestebruger works, and rate limits
-  are all unconfirmed. Needs its own live test before the engine's CVR piece is built.
+  **Resolved for CVR, 2026-08-17**: the BBR tjenestebruger does *not* carry over.
+  CVR access is a separate, heavier process either way: the modern path needs MitID
+  Erhverv + OAuth requested via the Datafordeler Administration portal; the legacy
+  REST path (itself being phased out by end of 2026, Datafordeler-wide) needs an
+  email request to cvrselvbetjening@erst.dk, mandatory IPv4 whitelisting, and a
+  separate web+service user. No free, fast path exists today. Third-party wrappers
+  (cvr.dev) are free for 30 days only, then paid. **Decision: CVR is out of v1
+  scope.** Submit the free MitID Erhverv/OAuth access request now (no reason not
+  to, given the lead time), but don't block the engine or demo on it — a BBR-only
+  property profile is still a legitimate "wow" versus manual portal lookups, and
+  CVR/ownership data becomes a v1.1 addition once access is approved or a specific
+  client engagement justifies the extra build. See PRD 02 for the resulting scope
+  change.
 - Real-vs-build call: BoligIQ / Accobat's Datadrevet Ejendom already sell pre-joined
   registry aggregations — worth a cheap check on their pricing/access before investing
   further engine time in raw BBR+CVR joining, in case reselling is cheaper than building.

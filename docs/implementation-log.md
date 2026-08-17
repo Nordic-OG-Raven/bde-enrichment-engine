@@ -10,17 +10,29 @@ in place every time it changes; never edit past entries in the Log — add a new
 
 **As of 2026-08-17 (updated)**
 
+- **Engine v1 (BBR-only) is implemented and working.** `enrichment_engine/` resolves a
+  free-text Danish address (via Dataforsyningen, free/no auth) and returns a normalized
+  `PropertyProfile` with BBR building data (year built, area, floors, wall/roof
+  material, heating type). Tested end-to-end against two real Aarhus addresses.
+  Run via `PYTHONPATH=. python scripts/lookup_address.py "<address>"` (venv at
+  `.venv/`, deps in `requirements.txt`, credentials in `.env` — gitignored).
 - Open question 1 (Datafordeler.dk auth) resolved for BBR: a working tjenestebruger
-  account already exists, reused from the `aarhus_re` project (Finance-adjacent, at
-  `/Users/jonas/aarhus_re`), live-tested today against BBR — HTTP 200. CVR auth still
-  unconfirmed. See PRD 01 for details.
-- Build-vs-buy on BoligIQ/Accobat: leaning build, given proven low code volume
-  (~150–250 lines total) and now-confirmed working BBR access. Not fully closed —
-  still worth a cheap pricing check on their side, but no longer blocking.
-- Engine architecture decision: `requests` only, no `pandas`, for v1 — the precedent
-  project needed pandas for bulk ML-training pulls; this engine's single-record
-  lookups don't, and lighter dependencies are more portable into a future client's
-  environment (Azure Function, Power Automate, etc.).
+  account already exists, reused from the `aarhus_re` project (at
+  `/Users/jonas/aarhus_re`), live-tested — HTTP 200, confirmed working.
+- **CVR is out of v1 scope.** It's not a matter of reusing the BBR credential — CVR
+  access requires its own request/approval process (MitID Erhverv+OAuth, or legacy
+  REST with mandatory IP whitelisting), with no free instant path. Decision: ship the
+  BBR-only demo first; submit the free CVR access request in parallel since it has
+  lead time regardless.
+- Build-vs-buy on BoligIQ/Accobat: leaning build, given proven low code volume and
+  now-working BBR access. Not fully closed — still worth a cheap pricing check on
+  their side — but no longer blocking.
+- Engine architecture: `requests` only, no `pandas` — precedent project needed pandas
+  for bulk ML-training pulls; this engine's single-record lookups don't, and lighter
+  dependencies are more portable into a future client's environment.
+- Heads-up for later: Datafordeler REST (the API style used here) is being phased out
+  Datafordeler-wide by end of 2026 in favor of GraphQL. Not a v1 concern (months of
+  runway), but worth remembering before investing heavily in more REST-based fetches.
 
 - SMV:Digital advisor status: **approved** (approval email received 2026-08-17).
   CV still needs finishing on ehmidt.dk — open items: which email inbox to list,
@@ -40,15 +52,47 @@ in place every time it changes; never edit past entries in the Log — add a new
 
 ## Next actions
 
-1. Confirm Datafordeler.dk auth/access requirements (open question in PRD 01).
-2. Scaffold the `enrichment_engine` Python package per PRD 01.
-3. Implement BBR + CVR fetch/normalize/join for a single address lookup.
-4. Build the Streamlit demo (PRD 02) on top of it.
-5. Get it in front of one real prospect.
+1. Build the Streamlit demo (PRD 02) on top of the working engine.
+2. Submit the free CVR access request (MitID Erhverv + OAuth via Datafordeler
+   Administration) in parallel — not blocking, but has lead time.
+3. Get the demo in front of one real prospect.
+4. (Optional, not blocking) Cheap pricing check on BoligIQ/Accobat, mostly to settle
+   the build-vs-buy question fully rather than because it's needed.
 
 ---
 
 ## Log
+
+### 2026-08-17 — Built and tested the v1 (BBR-only) engine; CVR moved out of scope
+
+Scaffolded `enrichment_engine/` (Python 3.12, venv, `requests` + `python-dotenv` only):
+
+- `address.py` — resolves a free-text address to an adgangsadresse ID via
+  Dataforsyningen's free, unauthenticated `/adresser` API. Confirmed the returned
+  `adgangsadresse.id` is the same UUID BBR calls `husnummer`.
+- `bbr.py` — queries `BBR/BBRPublic/1/REST/Bygning` filtered by `husnummer` (confirmed
+  this filter param works via a live test), then normalizes to a `BuildingProfile`.
+  BBR returns full registration history per building, not just current state, so
+  `_pick_current()` heuristically picks the record with populated year/area fields
+  and the latest `registreringFra` — worth revisiting if a client engagement needs
+  provably-current-only data rather than "good enough for a demo."
+- `engine.py` — ties the two together into `property_profile(address) -> PropertyProfile`.
+- Tested end-to-end against two real Aarhus addresses (Ryesgade 1, Park Allé 5) —
+  both returned plausible BBR data (year built, area, floors, materials).
+
+Then investigated CVR access (the other open question) via web search, since the BBR
+credential turned out not to transfer:
+
+- Official Datafordeler CVR REST requires emailing cvrselvbetjening@erst.dk, mandatory
+  IPv4 whitelisting, and a separate web+service user — and REST itself is being phased
+  out Datafordeler-wide by end of 2026.
+- The modern replacement (CVRPerson entity) needs MitID Erhverv + OAuth via the
+  Datafordeler Administration portal.
+- cvr.dev (third-party wrapper) is free for 30 days only, then paid.
+- No free, fast path exists. **Decision: drop CVR from v1**, ship the BBR-only demo
+  (still a real "wow" vs. manual portal lookups on its own), and submit the free
+  MitID Erhverv/OAuth request in parallel since it costs nothing but time-to-approve.
+  PRD 01 and PRD 02 updated accordingly.
 
 ### 2026-08-17 — Resolved BBR auth; revised engine dependencies
 

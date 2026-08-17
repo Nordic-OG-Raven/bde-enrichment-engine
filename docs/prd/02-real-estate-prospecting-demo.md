@@ -43,10 +43,11 @@ Jutland — either found cold (CVR industry-code list) or in a live sales conver
 
 ## Functional requirements
 
-1. Single input field: Danish address (or CVR number as an alternate lookup).
-2. On submit, call the Enrichment Engine (PRD 01) and render:
-   - BBR fields: floor area, construction year, heating type, usage classification.
-   - Owning CVR entity: company name, CVR number.
+1. Single input field: Danish address.
+2. On submit, call the Enrichment Engine (PRD 01) and render BBR fields: floor area,
+   construction year, heating type, wall/roof material, floors.
+   (CVR/owning-entity lookup deferred — see PRD 01's 2026-08-17 log entry. Not a v1
+   demo field; add if/when CVR access is approved.)
 3. Plain, clean, legible read-only output — a table or simple card layout. No editing,
    no export, no saved history for v1.
 4. Graceful handling of "not found" / API errors (still needs to look credible in a
