@@ -123,11 +123,15 @@ business-critical rather than a demo enhancement.
   CVR/ownership data becomes a v1.1 addition once access is approved or a specific
   client engagement justifies the extra build. See PRD 02 for the resulting scope
   change.
-- Real-vs-build call: BoligIQ / Accobat's Datadrevet Ejendom already sell pre-joined
+- ~~Real-vs-build call: BoligIQ / Accobat's Datadrevet Ejendom already sell pre-joined
   registry aggregations — worth a cheap check on their pricing/access before investing
-  further engine time in raw BBR+CVR joining, in case reselling is cheaper than building.
-  Leaning build: existing precedent code (`aarhus_re/src/data/collectors/bbr.py`) shows
-  BBR fetch+normalize is ~150 lines for a bulk pull, likely 50–80 for a single-address
-  lookup; CVR lookup-by-number is typically a single GET call. Full engine (BBR + CVR +
-  join) estimated at 150–250 lines total — low enough effort that buying access looks
-  hard to justify unless CVR auth turns out to be a real blocker.
+  further engine time in raw BBR+CVR joining, in case reselling is cheaper than
+  building.~~ **Resolved 2026-08-17** with an actual number, not just a guess — see
+  [competitor-analysis.md](../reference/competitor-analysis.md). Accobat's DDE turned
+  out not to be comparable at all (internal-data BI platform, not public-data
+  aggregation). BoligIQ is directly comparable and broader than us (includes
+  Tinglysning/EJF), priced at ~10,000 DKK/year flat. Conclusion stands as build for
+  now (BBR-only engine already working, ~250 lines, zero cost) — but buying BoligIQ
+  access is now a real, priced option worth considering if a specific future client
+  engagement needs Tinglysning/EJF breadth, rather than independently chasing that
+  MitID Erhverv/bilag process from scratch.

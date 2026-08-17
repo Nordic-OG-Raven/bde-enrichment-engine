@@ -83,6 +83,25 @@ in place every time it changes; never edit past entries in the Log — add a new
 
 ## Log
 
+### 2026-08-17 — Checked Accobat and BoligIQ directly rather than assuming
+
+Full writeup: [competitor-analysis.md](reference/competitor-analysis.md). Short
+version: Accobat's Datadrevet Ejendom turned out not to be a real competitor at
+all (internal-data BI platform for property administrators, not public-data
+aggregation — closer to a possible future BDE offering than a current threat).
+BoligIQ is a genuine, directly comparable competitor: 20+ registries via one API,
+broader than us (has Tinglysning/EJF, which we don't), ~10,000 DKK/year flat.
+Their marketing doesn't mention historical sale price data, which we do have via
+`ois.py` — a plausible but unconfirmed differentiator, worth verifying via their
+free trial before relying on it.
+
+Resolves PRD 01's old build-vs-buy open question with an actual number instead
+of a guess: still building for now (already working, free), but buying BoligIQ
+access is a real option if a future client needs Tinglysning/EJF breadth.
+Reinforces the original strategic conclusion this project started from: compete
+on integration labor for smaller operators, not on raw registry-data breadth,
+which is already commoditized at a real, low price point.
+
 ### 2026-08-17 — Dropped st.map() after confirming it silently fails without WebGL
 
 Caught by the user actually looking at the running demo (not by any test —
