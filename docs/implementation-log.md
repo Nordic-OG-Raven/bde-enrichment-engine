@@ -33,15 +33,24 @@ in place every time it changes; never edit past entries in the Log — add a new
   not-found/ambiguous handling. Verified with `streamlit.testing.v1.AppTest`
   plus actual manual use. Full suite: **26/26 passing**. Run via
   `streamlit run streamlit_app.py`. **Not yet deployed or shown to a prospect.**
-- **CVR is out of v1 scope, and currently blocked at the infrastructure level.**
-  Only the `CVRPerson` entity is access-restricted (confirmed from
-  Erhvervsstyrelsen's own guidance — other CVR data needs no request); a
-  `CVRPerson` Dataadgang request was submitted 2026-08-17 (status "Ny",
-  pending). Separately, the account's API-key doesn't authenticate at all —
-  fails even against Datafordeler's own official documented example (tested
-  well past their 15-minute activation window) — so a Datafordeler support
-  ticket was filed 2026-08-17. `cvr.py` is blocked on that response, not on
-  anything code-side. Full trail: [datafordeler-access.md](reference/datafordeler-access.md).
+- **CVR is out of v1 scope, but the API-key auth blocker is now resolved.**
+  Datafordeler support replied 2026-08-17: API-key must go in the URL as a
+  query param (`?apiKey=`, not an `Authorization` header — our own error, we'd
+  copied DAR's documented curl example which uses the header form), and both
+  `CVR/v1` and `DAR/v1` are deprecated — `CVR/v2` is current. Retested live:
+  **`POST https://graphql.datafordeler.dk/CVR/v2?apiKey=<key>` returns 200**,
+  confirmed working. `CVR_Virksomhed` exists as a Relay-style connection
+  (`edges { node { ... } } }`), but the exact filter argument name for "look up
+  by CVR number" isn't found yet — introspection is disabled server-side, and
+  several plausible argument names (`cvrNummer`, `virksomhedCVRNummer`,
+  `cvrNummerIdentifikator`, a `filter:` object) were all rejected with
+  "argument does not exist." **Not blocking anything** — CVR was already out
+  of v1 scope — but the hard infrastructure blocker (auth) is gone; only the
+  exact query shape remains, solvable later via the official schema download
+  or a follow-up to support. Only the `CVRPerson` entity is access-restricted
+  (Dataadgang request submitted 2026-08-17, status "Ny", still pending) —
+  everything else, including `CVR_Virksomhed`, needs no approval, just the
+  right query. Full trail: [datafordeler-access.md](reference/datafordeler-access.md).
 - **BBR credential is still shared with the unrelated `aarhus_re` project** —
   a new dedicated Datafordeler Administration account exists now
   (`bde-enrichment-engine` IT-system) but it's GraphQL/Fildownload-only, a
@@ -67,13 +76,16 @@ in place every time it changes; never edit past entries in the Log — add a new
    differently for unfamiliar traffic.
 2. **Get the demo in front of one real prospect** — the actual end goal,
    blocked only on (1).
-3. Wait on Datafordeler support's reply re: the non-authenticating API-key,
-   then resume `cvr.py` (basic company lookup — confirmed unrestricted once
-   auth actually works).
+3. ~~Wait on Datafordeler support's reply re: the non-authenticating API-key~~
+   **Resolved 2026-08-17** — auth works now (`CVR/v2?apiKey=`). Remaining,
+   not blocking: find `CVR_Virksomhed`'s exact filter argument name (schema
+   introspection is disabled; try the official schema download or ask support
+   for a worked example) before building `cvr.py` for real.
 4. Check back on the `CVRPerson` Dataadgang request status.
 5. Decouple the BBR REST credential from `aarhus_re` (2026-08-17 review,
    finding 2) — still open, not blocking.
-6. *(Optional)* Cheap pricing check on BoligIQ/Accobat.
+6. ~~*(Optional)* Cheap pricing check on BoligIQ/Accobat~~ **Done 2026-08-17** —
+   see [competitor-analysis.md](reference/competitor-analysis.md).
 7. *(Separate project)* `aarhus_re` could retry EJF sale-price data via the
    proper Administration + MitID Erhverv + bilag path documented in
    [datafordeler-access.md](reference/datafordeler-access.md) — its earlier
@@ -82,6 +94,36 @@ in place every time it changes; never edit past entries in the Log — add a new
 ---
 
 ## Log
+
+### 2026-08-17 — Datafordeler support replied; CVR API-key auth now works
+
+Support's reply (Emil Lundström) identified two mistakes, both on our end:
+
+1. API-key belongs in the URL as `?apiKey=`, not an `Authorization` header —
+   we'd copied the header form from Datafordeler's own published DAR curl
+   example, which turned out to itself be for a deprecated version/style.
+2. `CVR/v1` and `DAR/v1` are both deprecated (`udfaset`) — current is `v2`
+   (confirmed live; didn't test whether DAR has since moved past v1/v3 too).
+
+Retested live: `POST https://graphql.datafordeler.dk/CVR/v2?apiKey=<key>`
+returns `200 {"data":{"__typename":"Query"}}` — confirmed working, resolving
+the blocker from the two earlier log entries same day ("API-key doesn't
+authenticate..." and the support-ticket entry). Root cause was two bugs in
+our own testing, not a Datafordeler-side account problem as originally
+concluded — worth remembering that a strongly-argued conclusion (we'd
+verified against their own documented example) can still be wrong if the
+documented example itself was stale.
+
+Explored `CVR_Virksomhed` (a Relay-style connection - `edges { node { ... } } }`
+confirmed) to find the CVR-number lookup argument. Introspection is disabled
+server-side (`Introspection is not allowed for the current request`), and
+tried argument names (`cvrNummer`, `virksomhedCVRNummer`,
+`cvrNummerIdentifikator`, a `filter:` object) were all rejected as
+non-existent. Not resolved this session, not blocking anything - CVR is
+already out of v1 scope. Next attempt should use Datafordeler's official
+schema download (interactive UI, needs a real browser session) or a
+follow-up question to support with a specific ask: "what's the argument name
+for looking up CVR_Virksomhed by CVR number?"
 
 ### 2026-08-17 — Checked Accobat and BoligIQ directly rather than assuming
 
