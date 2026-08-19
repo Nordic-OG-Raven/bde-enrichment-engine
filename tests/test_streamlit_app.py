@@ -41,6 +41,13 @@ def test_multi_unit_building_shows_map_image_link_and_units_table():
     subheader_text = " ".join(s.value for s in at.subheader)
     assert "Enheder" in subheader_text
     assert len(at.dataframe) == 1
+    # Værelser previously mixed int and "Ukendt" (str) in one column, which
+    # broke Arrow serialization in production (caught via deployed-app logs,
+    # not by this test suite - AppTest doesn't exercise Arrow conversion).
+    # Guard against the type mix recurring, even though this test can't
+    # catch the Arrow failure itself.
+    varelser_col = at.dataframe[0].value["Værelser"]
+    assert all(isinstance(v, str) for v in varelser_col)
 
 
 def test_shows_energy_label_when_available():

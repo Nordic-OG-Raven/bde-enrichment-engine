@@ -1,3 +1,4 @@
+import logging
 import sys
 from pathlib import Path
 
@@ -8,6 +9,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from enrichment_engine import staticmap
 from enrichment_engine.engine import property_profile
 from enrichment_engine.exceptions import AddressLookupError, AddressNotFoundError, BBRLookupError
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+log = logging.getLogger(__name__)
 
 st.set_page_config(page_title="Ejendomsopslag", page_icon="🏠")
 
@@ -26,7 +30,8 @@ if submitted and query:
             profile = property_profile(query)
         except AddressNotFoundError:
             st.error(f"Kunne ikke finde en adresse, der matcher \"{query}\". Tjek stavning og prøv igen.")
-        except (AddressLookupError, BBRLookupError):
+        except (AddressLookupError, BBRLookupError) as e:
+            log.error("Lookup failed for %r: %s", query, e)
             st.error("Der opstod en fejl under opslaget. Prøv igen om lidt.")
         else:
             st.subheader(profile.address.display_name)
@@ -90,7 +95,7 @@ if submitted and query:
                             "Anvendelse": u.use_label or "Ukendt",
                             "Boligareal": f"{u.living_area_sqm} m²" if u.living_area_sqm else "Ukendt",
                             "Samlet areal": f"{u.total_area_sqm} m²" if u.total_area_sqm else "Ukendt",
-                            "Værelser": u.num_rooms if u.num_rooms is not None else "Ukendt",
+                            "Værelser": str(u.num_rooms) if u.num_rooms is not None else "Ukendt",
                         }
                         for u in profile.units
                     ],
