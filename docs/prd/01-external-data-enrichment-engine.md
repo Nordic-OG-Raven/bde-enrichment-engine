@@ -45,7 +45,7 @@ into a client's Power BI/Business Central) should sit on top of this, not duplic
 | Source | Registry | What it returns | Official? |
 |---|---|---|---|
 | Dataforsyningen (free, no auth) | Adresser | address resolution + adgangsadresse ID, kommunekode, WGS84 lon/lat | Yes |
-| Datafordeler.dk | BBR (Bygnings- og Boligregistret) | building fields (area, year, materials, heating) + per-unit breakdown | Yes, documented REST |
+| Datafordeler.dk | BBR (Bygnings- og Boligregistret) | building fields (area, year, materials, heating) + per-unit breakdown | Yes, official GraphQL (`graphql.datafordeler.dk/BBR/v3`, our own API-key — migrated 2026-08-19 off the shared `aarhus_re` REST credential; see implementation log) |
 | Datafordeler.dk | DAR_BFE_Public | husnummer → BFE number (join key for OIS) | Yes, documented REST |
 | tjekenergimaerke.emoweb.dk | Energimærke | current/historic energy certificate class | **No** — unofficial public search form, no auth. See `energimaerke.py` docstring. |
 | ois.dk | SVUR (via OIS) | most recent sale price + date | **No** — unofficial API, reverse-engineered (by `aarhus_re`, reused here). See `ois.py` docstring. |
@@ -81,6 +81,12 @@ business-critical rather than a demo enhancement.
 - Language: Python 3.11+, matching existing tooling conventions.
 - HTTP: `requests` — matches proven precedent (`aarhus_re`'s BBR collector) and keeps
   dependencies minimal.
+- BBR access: Datafordeler's GraphQL API (`graphql.datafordeler.dk/BBR/v3`), authenticated
+  with our own dedicated `DATAFORDELER_API_KEY` — not the legacy REST API, and not the
+  credential shared with `aarhus_re`. See
+  [datafordeler-access.md](../reference/datafordeler-access.md) for the GraphQL mechanics
+  (bitemporal arguments, `where:` filter shape, field-name transliteration, pagination
+  gotchas) worked out getting this migration right.
 - Data shaping: plain dataclasses, not `pandas`. The precedent project needed pandas
   because it bulk-fetched 200k+ rows for ML training; this engine does single-record
   lookups, where pandas is unnecessary weight. Keeping dependencies to just `requests`

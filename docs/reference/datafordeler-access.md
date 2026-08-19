@@ -14,6 +14,65 @@ Dataadgang request needed. This resolves the open question from the 2026-08-17
 engine review/log: we do NOT need to wait on any approval to build basic CVR company
 lookup — only ownership/participant data (`CVRPerson`) needs the request in flight now.
 
+## GraphQL API mechanics (worked out empirically, 2026-08-17 to 2026-08-19)
+
+Applies to any register's modern GraphQL API (`graphql.datafordeler.dk/<REGISTER>/<version>`),
+not just BBR/CVR specifically — worth checking here before re-deriving this from
+scratch for a future register (e.g. DAR/BFE).
+
+- **Auth**: API-key as a URL query param, `?apiKey=<key>` — **not** an
+  `Authorization` header, despite Datafordeler's own published DAR curl example
+  showing the header form (that example is for a deprecated version/style; see
+  Datafordeler support's reply, 2026-08-17, which caught this).
+- **Versions matter and go stale**: `v1` was deprecated for both CVR and DAR as
+  of 2026-08. Current confirmed-working versions: `CVR/v2`, `BBR/v3`, `DAR/v2`
+  and `v3` (untested which is authoritative for DAR). No general rule for which
+  version is current — test `v1` through `v3`+ directly (401/200 vs. 404
+  distinguishes "auth rejected" from "version doesn't exist" reasonably well,
+  though not perfectly — see the CVR investigation in the log for how this
+  misled us before support's reply).
+- **Introspection is disabled** server-side (`Introspection is not allowed for
+  the current request`, code `HC0046`) — no `__schema`/`__type` queries. Find
+  field/argument names via: (a) Datafordeler's own worked examples where they
+  exist (search Confluence for "`<Entity>` GraphQL" or "eksempel"), or (b)
+  trial queries — GraphQL's own error messages are informative enough to
+  iterate from (e.g. "argument does not exist", "field does not exist",
+  "value type does not match" all name the exact problem).
+- **Filtering is `where: <Entity>FilterInput`, not flat arguments.** E.g.
+  `BBR_Bygning(where: {husnummer: {eq: "..."}})`, not
+  `BBR_Bygning(husnummer: "...")`. This was the actual blocker in the earlier
+  failed attempts to find `CVR_Virksomhed`'s lookup argument — not a wrong
+  argument *name*, a wrong argument *shape* entirely. String fields use a
+  `{eq: "..."}` wrapper (`DafStringOperationFilterInput`), not a bare string.
+- **A bitemporal "as of when" argument is required** alongside `where:` — either
+  `registreringstid` or `virkningstid`, both typed `DafDateTime!`, not the
+  standard GraphQL `DateTime`. A current-time ISO-8601 string
+  (`datetime.now(timezone.utc).isoformat()`) works for "give me data as of now."
+  Omitting both gives an explicit, helpful error naming exactly what's missing.
+- **Use real GraphQL variables (`query($x: Type!) {...}`, `"variables": {...}`
+  in the request body), not raw string interpolation** — safer, and avoids
+  fighting quote-escaping across shell/JSON/GraphQL layers (cost real time
+  during testing before switching to this).
+- **Field names transliterate Danish characters**: æ→ae, ø→oe, å→aa. E.g. REST's
+  `byg026Opførelsesår` is `byg026Opfoerelsesaar` in GraphQL,
+  `enh031AntalVærelser` is `enh031AntalVaerelser`. Consistent enough to predict,
+  but verify each field rather than assume.
+- **Relay-style connections need real page-size headroom.** `edges { node {...} }`
+  returns *all* historical registration rows matching the filter, not just
+  current ones — for an entity with many sub-records (e.g. `BBR_Enhed` for a
+  13-unit building had 81 total historical rows), a low `first:` value
+  silently truncates before covering every distinct record, with no error or
+  warning — just missing units. Confirmed live: `first: 50` returned only 9 of
+  13 real units for one address. No `totalCount` field exists to check
+  coverage; the only real estimate protection is picking a `first:` value with
+  real headroom above worst-case (used `500` for `BBR_Enhed`, `200` for
+  `BBR_Bygning`) and staying alert to suspiciously low counts on large
+  properties.
+- **`Enhed`-style child entities filter by parent ID, not by address.** REST
+  and GraphQL both reject a `husnummer` filter directly on `BBR_Enhed` — needs
+  `bygning` (the building's `id_lokalId`) instead. Same limitation carries over
+  from REST to GraphQL exactly.
+
 ## General rules (apply across all registers)
 
 - Access requests are per-environment — Production and Test04 need separate requests.

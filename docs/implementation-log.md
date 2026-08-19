@@ -8,7 +8,19 @@ in place every time it changes; never edit past entries in the Log — add a new
 
 ## Current State
 
-**As of 2026-08-17**
+**As of 2026-08-19**
+
+- **BBR migrated off the shared `aarhus_re` credential.** `bbr.py` now uses
+  Datafordeler's GraphQL API (`graphql.datafordeler.dk/BBR/v3`) via our own
+  dedicated `DATAFORDELER_API_KEY` — same key already set up for CVR. Verified
+  against known-good REST output (exact same current-record selection, same
+  building/unit data). `config.py`'s `BBR_USERNAME`/`BBR_PASSWORD` are kept
+  only because `bfe.py` (the BFE-resolution hop for sale-price lookups) still
+  uses the legacy REST `DAR_BFE_Public` service — not chased down this round,
+  see Next Actions. Full GraphQL mechanics (bitemporal args, `where:` filter
+  shape, field-name transliteration, a real pagination bug caught and fixed —
+  see log below) written up in
+  [datafordeler-access.md](reference/datafordeler-access.md).
 
 - **SMV:Digital advisor status: approved.** CV still needs finishing on
   ehmidt.dk (email inbox, LinkedIn URL, hourly rate, reference). Onboarding
@@ -61,11 +73,12 @@ in place every time it changes; never edit past entries in the Log — add a new
   (Dataadgang request submitted 2026-08-17, status "Ny", still pending) —
   everything else, including `CVR_Virksomhed`, needs no approval, just the
   right query. Full trail: [datafordeler-access.md](reference/datafordeler-access.md).
-- **BBR credential is still shared with the unrelated `aarhus_re` project** —
-  a new dedicated Datafordeler Administration account exists now
-  (`bde-enrichment-engine` IT-system) but it's GraphQL/Fildownload-only, a
-  different service surface than the legacy REST BBR currently uses, so it
-  doesn't replace the shared credential. Still open, not blocking.
+- ~~BBR credential is still shared with the unrelated `aarhus_re` project~~
+  **Resolved 2026-08-19** — `bbr.py` migrated to GraphQL via our own
+  `DATAFORDELER_API_KEY`. **Partially open still**: `bfe.py` (BFE-number
+  resolution for sale-price lookups) remains on the shared REST credential —
+  its GraphQL equivalent wasn't chased down (out of scope for this pass; small,
+  already-best-effort component). See Next Actions.
 - Build-vs-buy on BoligIQ/Accobat: leaning build (low code volume, BBR already
   working). Not fully closed, not blocking.
 - Strategic direction: deliberately narrower than the original four-sector plan
@@ -87,12 +100,17 @@ in place every time it changes; never edit past entries in the Log — add a new
    now genuinely unblocked. This is the priority.
 3. ~~Wait on Datafordeler support's reply re: the non-authenticating API-key~~
    **Resolved 2026-08-17** — auth works now (`CVR/v2?apiKey=`). Remaining,
-   not blocking: find `CVR_Virksomhed`'s exact filter argument name (schema
-   introspection is disabled; try the official schema download or ask support
-   for a worked example) before building `cvr.py` for real.
+   not blocking: find `CVR_Virksomhed`'s exact filter shape (now know the
+   general trick from the BBR migration — `where: {field: {eq: "..."}}`, not
+   flat arguments — just need to apply it to CVR specifically) before building
+   `cvr.py` for real.
 4. Check back on the `CVRPerson` Dataadgang request status.
-5. Decouple the BBR REST credential from `aarhus_re` (2026-08-17 review,
-   finding 2) — still open, not blocking.
+5. ~~Decouple the BBR REST credential from `aarhus_re`~~ **Resolved
+   2026-08-19** for BBR itself. Still open, low priority: `bfe.py`'s
+   `DAR_BFE_Public` REST lookup remains on the shared credential — no GraphQL
+   equivalent found yet (DAR is available via GraphQL, `graphql.datafordeler.dk/DAR/v2`
+   and `v3` both authenticate, but the specific husnummer→BFE field/entity
+   wasn't explored).
 6. ~~*(Optional)* Cheap pricing check on BoligIQ/Accobat~~ **Done 2026-08-17** —
    see [competitor-analysis.md](reference/competitor-analysis.md).
 7. *(Separate project)* `aarhus_re` could retry EJF sale-price data via the
@@ -103,6 +121,55 @@ in place every time it changes; never edit past entries in the Log — add a new
 ---
 
 ## Log
+
+### 2026-08-19 — Migrated BBR from REST to GraphQL, off the shared aarhus_re credential
+
+Prompted by wanting to resolve the "shared credential" item properly rather
+than leave it open indefinitely. Since the BBR API-key auth pattern was
+already proven working for CVR, tested whether BBR was reachable the same
+way — it was (`graphql.datafordeler.dk/BBR/v3?apiKey=` returns 200), which
+meant a real fix was possible, not just documentation of the problem.
+
+Full mechanics (bitemporal arguments, `where:` filter shape, field-name
+transliteration) written up in
+[datafordeler-access.md](reference/datafordeler-access.md) — most of it
+discovered by finding an official Datafordeler example query for
+`BBR_Bygning` first, rather than repeating the same blind trial-and-error
+that failed to find `CVR_Virksomhed`'s argument shape earlier. Turns out that
+whole earlier struggle was about argument *shape* (`where: {field: {eq: ...}}`,
+not flat scalar arguments), not argument *naming* — worth remembering for
+`CVR_Virksomhed` next time it's picked up.
+
+Two real bugs caught by verifying against known-good REST data rather than
+trusting the first GraphQL response:
+
+1. **GraphQL's default record ordering isn't "current."** A test query
+   without proper filtering returned an old (2017) historical registration
+   instead of the actual current (2025) one for the same building — caught
+   because the returned `byg021` use-code (320, a deprecated code) didn't
+   match what REST had already confirmed (321). Fixed by reusing `bbr.py`'s
+   existing, already-tested `_pick_current` logic unchanged on top of the
+   GraphQL results, rather than trusting the API's default ordering.
+2. **`first: 50` silently truncated units with no error.** A 13-unit
+   building's `BBR_Enhed` history was 81 total rows (units × registration
+   history each) — `first: 50` returned only 9 of the 13 real units, no
+   warning, no `totalCount` field to sanity-check against. Caught by
+   comparing the returned unit count against the already-known-correct REST
+   value (13) rather than assuming the new count was right. Fixed by raising
+   page sizes with real headroom (`BBR_Enhed`: 500, `BBR_Bygning`: 200) —
+   documented as a re-check-if-suspicious risk for very large properties,
+   not a fully eliminated one.
+
+Also renamed `CVR_API_KEY` → `DATAFORDELER_API_KEY` throughout (`.env`,
+`.env.example`, `config.py`) since one key now genuinely serves multiple
+registers, not just CVR. `BBR_USERNAME`/`BBR_PASSWORD` kept in `.env` and
+`config.py` — `bfe.py` (BFE-number resolution for sale-price lookups) still
+needs them; its GraphQL equivalent wasn't chased down this round, since that
+was extra scope beyond what was actually asked (decouple *BBR*).
+
+Verified end-to-end against two known addresses (Ryesgade 1, Guldsmedgade 21)
+with exact matches to previously-confirmed REST values. Full test suite:
+26/26 passing.
 
 ### 2026-08-19 — Demo deployed and live: bde-ejendomsopslag.streamlit.app
 
