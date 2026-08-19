@@ -10,16 +10,20 @@ in place every time it changes; never edit past entries in the Log — add a new
 
 **As of 2026-08-19**
 
-- **BBR migrated off the shared `aarhus_re` credential.** `bbr.py` now uses
-  Datafordeler's GraphQL API (`graphql.datafordeler.dk/BBR/v3`) via our own
-  dedicated `DATAFORDELER_API_KEY` — same key already set up for CVR. Verified
-  against known-good REST output (exact same current-record selection, same
-  building/unit data). `config.py`'s `BBR_USERNAME`/`BBR_PASSWORD` are kept
-  only because `bfe.py` (the BFE-resolution hop for sale-price lookups) still
-  uses the legacy REST `DAR_BFE_Public` service — not chased down this round,
-  see Next Actions. Full GraphQL mechanics (bitemporal args, `where:` filter
-  shape, field-name transliteration, a real pagination bug caught and fixed —
-  see log below) written up in
+- **BBR migrated off the shared `aarhus_re` credential — live and confirmed
+  working, deployed and local.** `bbr.py` uses Datafordeler's GraphQL API
+  (`graphql.datafordeler.dk/BBR/v3`) via our own dedicated
+  `DATAFORDELER_API_KEY` — same key already set up for CVR. `config.py`'s
+  `BBR_USERNAME`/`BBR_PASSWORD` are kept only because `bfe.py` (the
+  BFE-resolution hop for sale-price lookups) still uses the legacy REST
+  `DAR_BFE_Public` service — not chased down this round, see Next Actions.
+  **The IT-system's IP-adresser list is now empty on purpose** — confirmed by
+  Datafordeler support that an empty list means unrestricted access (not "no
+  access"), and that clearing it takes **up to 15 minutes to propagate**. The
+  deployed app's 401s persisted well past our first (too-impatient) retry,
+  which is what made this look like a deeper problem before support's answer
+  settled it. Full incident writeup, including the wrong turns, in the log
+  below and in
   [datafordeler-access.md](reference/datafordeler-access.md).
 
 - **SMV:Digital advisor status: approved.** CV still needs finishing on
@@ -87,33 +91,22 @@ in place every time it changes; never edit past entries in the Log — add a new
 
 ## Next actions
 
-1. ~~Deploy `streamlit_app.py` to Streamlit Community Cloud~~ **Done
-   2026-08-19** — live at
-   [bde-ejendomsopslag.streamlit.app](https://bde-ejendomsopslag.streamlit.app).
-   One check still outstanding: verify the unofficial scrapers (energy
-   certificate, sale price) actually return data from the *deployed* instance,
-   not just locally — different outbound IP (Streamlit Cloud's, not this
-   machine's), and both sources are unofficial/reverse-engineered, so it's
-   worth confirming rather than assuming. Test with `Guldsmedgade 21, 8000
-   Aarhus`, which is confirmed to have both locally.
-2. **Get the demo in front of one real prospect** — the actual end goal, and
-   now genuinely unblocked. This is the priority.
-3. ~~Wait on Datafordeler support's reply re: the non-authenticating API-key~~
-   **Resolved 2026-08-17** — auth works now (`CVR/v2?apiKey=`). Remaining,
-   not blocking: find `CVR_Virksomhed`'s exact filter shape (now know the
-   general trick from the BBR migration — `where: {field: {eq: "..."}}`, not
-   flat arguments — just need to apply it to CVR specifically) before building
-   `cvr.py` for real.
-4. Check back on the `CVRPerson` Dataadgang request status.
-5. ~~Decouple the BBR REST credential from `aarhus_re`~~ **Resolved
-   2026-08-19** for BBR itself. Still open, low priority: `bfe.py`'s
-   `DAR_BFE_Public` REST lookup remains on the shared credential — no GraphQL
-   equivalent found yet (DAR is available via GraphQL, `graphql.datafordeler.dk/DAR/v2`
-   and `v3` both authenticate, but the specific husnummer→BFE field/entity
-   wasn't explored).
-6. ~~*(Optional)* Cheap pricing check on BoligIQ/Accobat~~ **Done 2026-08-17** —
+1. **Get the demo in front of one real prospect** — the actual end goal.
+   Genuinely unblocked now: deployed, BBR/units/map/energy-cert/sale-price all
+   confirmed working on the live instance itself, not just locally. This is
+   the priority — everything else below is background/technical debt.
+2. Find `CVR_Virksomhed`'s exact filter shape (now know the general trick
+   from the BBR migration — `where: {field: {eq: "..."}}`, not flat
+   arguments — just need to apply it to CVR specifically) before building
+   `cvr.py` for real. Not blocking.
+3. Check back on the `CVRPerson` Dataadgang request status.
+4. `bfe.py`'s `DAR_BFE_Public` REST lookup remains on the shared `aarhus_re`
+   credential — no GraphQL equivalent found yet (DAR is available via
+   GraphQL, `graphql.datafordeler.dk/DAR/v2` and `v3` both authenticate, but
+   the specific husnummer→BFE field/entity wasn't explored). Low priority.
+5. ~~*(Optional)* Cheap pricing check on BoligIQ/Accobat~~ **Done 2026-08-17** —
    see [competitor-analysis.md](reference/competitor-analysis.md).
-7. *(Separate project)* `aarhus_re` could retry EJF sale-price data via the
+6. *(Separate project)* `aarhus_re` could retry EJF sale-price data via the
    proper Administration + MitID Erhverv + bilag path documented in
    [datafordeler-access.md](reference/datafordeler-access.md) — its earlier
    ad-hoc attempt was blocked on the wrong path, not a hard no.
@@ -121,6 +114,85 @@ in place every time it changes; never edit past entries in the Log — add a new
 ---
 
 ## Log
+
+### 2026-08-19 — Deployed-app 401 incident: root cause, wrong turns, and the actual fix
+
+The BBR GraphQL migration (previous log entry) worked perfectly locally and
+was declared done without testing the one thing that mattered: whether it
+also worked from the deployed app's network origin, not just this machine's.
+It didn't — every deployed lookup failed with `401 Unauthorized`, same key,
+same code. Full incident, in order, including the wrong turns:
+
+1. **First hypothesis: secrets not propagated.** Reasonable given the env var
+   rename (`CVR_API_KEY` → `DATAFORDELER_API_KEY`) - a redeploy did briefly
+   crash with a literal "missing env var" error. But the user confirmed the
+   secrets box had the exact correct value, ruling this out.
+2. **Found the real error, via a real gap**: `streamlit_app.py` caught
+   lookup failures and showed a generic message but never logged the actual
+   exception - meaning even the deployed app's own logs had no information
+   to diagnose with. Fixed by adding proper `log.error(...)` before the
+   generic user-facing message. This immediately paid off: the next failure
+   showed the real cause, `401 Client Error: Unauthorized`.
+3. **Second hypothesis: IP allowlisting.** The IT-system's IP-adresser list
+   had exactly one entry (this machine's IP), and the docs' own description
+   text ("IP-adresser... hvorfra fortrolige data bliver hentet") contradicted
+   this being relevant to free-data API-key calls at all - but the pattern
+   (same key, different origin, different result) was suggestive enough to
+   test. Deleted the IP entry; deployed calls still failed immediately after.
+   Concluded (wrongly) that this ruled out a simple allowlist and started
+   researching alternative hosting with a static outbound IP - a real
+   solution to a real constraint, but for the wrong problem, and one that
+   would have cost real money for something that didn't need it.
+4. **User pushback, twice, both fair and both correctly aimed:**
+   - *"The old REST credential worked fine from Streamlit Cloud - why would
+     the new one need different infrastructure, unless something in the
+     migration itself is the bug?"* Correct challenge: I hadn't proven the
+     401 was environment-driven rather than a code regression, I'd pattern
+     matched. Response: reverted was proposed as the safe default, but only
+     as an offer, not executed without explicit confirmation - a distinction
+     that mattered given what happened next.
+   - *"Did you ask me to delete the IP entry and never ask me to restore it -
+     and are you sure that's safe given BBR_USERNAME/PASSWORD are still in
+     the secrets?"* Verified rather than asserted: `bfe.py`, which still uses
+     the legacy tjenestebruger credential, was tested live and confirmed
+     unaffected - the tjenestebruger system and the IT-system's IP list are
+     entirely separate, predating each other.
+5. **Ruled out a simpler explanation before trusting the IP theory further**:
+   added diagnostic logging of the loaded API-key's length/prefix/suffix
+   (never the full value) to check whether the deployed secret value itself
+   might be subtly wrong - plausible given secrets propagation had already
+   proven unreliable once in this same incident. Deployed logs showed an
+   exact match to the correct local value (`length=97 prefix=XlkKpk
+   suffix=7nrZC2`). Ruled out - the secret was correct, the 401 was real.
+6. **Second support ticket, with the accumulated evidence** (not the first
+   instinct - the user initially declined a second contact, then chose to
+   send one anyway once the remaining options were both costly: pay for
+   static-IP hosting, or get a real answer). Support's reply settled
+   everything cleanly: an API-key is **not** pinned to its first-used IP (my
+   working theory was simply wrong) - it's just the *current* IP-adresser
+   list that applies, and **clearing that list takes up to 15 minutes to
+   propagate**. Our test in step 3 almost certainly failed only because we
+   retested too soon after deleting the entry, not because deletion didn't
+   work.
+7. Retested after sufficient time had passed: **works**, deployed and local,
+   confirmed by the user against real data (Guldsmedgade 21, all fields
+   correct). Removed the diagnostic key-logging from `config.py` now that
+   its question is settled.
+
+**Actual root cause**: an empty IP-adresser list *does* mean unrestricted
+access, exactly as hoped - the only real bug was testing the fix before its
+own documented 15-minute propagation window had elapsed, which made a
+correct fix look like a failed one and sent the investigation sideways for
+a while. No hosting change was needed, no code regression existed in the
+migration itself - only the deployment validation gap from the previous log
+entry was real, and cost the time this entry documents.
+
+**Worth carrying forward**: test from the actual deployment target before
+declaring a backend migration done, not just locally - this incident's real
+root cause (an under-communicated propagation delay) would likely have been
+found in minutes if the first post-migration test had been against the
+deployed app rather than repeated local runs that could never have caught
+an origin-dependent issue in the first place.
 
 ### 2026-08-19 — Migrated BBR from REST to GraphQL, off the shared aarhus_re credential
 
