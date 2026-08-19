@@ -25,14 +25,24 @@ in place every time it changes; never edit past entries in the Log — add a new
   [2026-08-17 review](reviews/2026-08-17-engine-v1-review.md) (original
   hardening pass) plus the 2026-08-17 "value expansion" log entry below (new
   data sources). Run via `python scripts/lookup_address.py "<address>"`.
-- **Product 2, Streamlit Demo — v1.1, tested locally and confirmed working by
-  the user in a real browser, not yet deployed.** `streamlit_app.py`: address
-  input, decoded BBR metrics (no truncation — fixed same day), server-rendered
-  OSM map image (not `st.map()` — dropped after it silently failed without
+- **Product 2, Streamlit Demo — LIVE.** Deployed to Streamlit Community Cloud:
+  **[bde-ejendomsopslag.streamlit.app](https://bde-ejendomsopslag.streamlit.app)**.
+  `streamlit_app.py`: address input, decoded BBR metrics, server-rendered OSM
+  map image (not `st.map()` — dropped after it silently failed without
   WebGL), units table, energy certificate, last sale price, clean
   not-found/ambiguous handling. Verified with `streamlit.testing.v1.AppTest`
-  plus actual manual use. Full suite: **26/26 passing**. Run via
-  `streamlit run streamlit_app.py`. **Not yet deployed or shown to a prospect.**
+  plus real manual use, both locally and on the deployed instance. Full suite:
+  **26/26 passing**. **Not yet shown to an actual prospect.**
+  Deployment itself was a two-part fight, worth remembering if this ever needs
+  redoing (e.g. a second app, a colleague's machine): (1) Streamlit's GitHub
+  OAuth app only requests `public_repo` scope by default — deploying a
+  *private* repo needs a separate, additional grant done from *inside*
+  Streamlit's own UI (profile → Settings → Linked accounts → Source control →
+  "Connect here"), not anything on GitHub's settings pages, which is where
+  most troubleshooting instinctively goes; (2) the deploy's default Python
+  version (3.14) has no prebuilt wheel for `pillow==10.4.0`, which fails
+  building from source (missing zlib headers) — fixed by pinning the app to
+  Python 3.12 in Advanced Settings, matching local dev.
 - **CVR is out of v1 scope, but the API-key auth blocker is now resolved.**
   Datafordeler support replied 2026-08-17: API-key must go in the URL as a
   query param (`?apiKey=`, not an `Authorization` header — our own error, we'd
@@ -64,18 +74,17 @@ in place every time it changes; never edit past entries in the Log — add a new
 
 ## Next actions
 
-1. **Deploy `streamlit_app.py` to Streamlit Community Cloud** — built and
-   tested locally, not yet live anywhere. The actual next step toward a
-   shareable URL per PRD 02's success criteria. Two things worth checking once
-   it's live, not before: (a) if the demo ever needs live `CVRPerson`/IP-gated
-   calls in the future, the host's outbound IP will need registering too, and
-   free tiers often don't offer a fixed IP; (b) the energy-certificate and
-   sale-price sources are unofficial scrapes (see PRD 01) — worth a quick
-   re-check that they still work once running from a different outbound IP
-   (Streamlit Cloud's, not this machine's), in case the target sites behave
-   differently for unfamiliar traffic.
-2. **Get the demo in front of one real prospect** — the actual end goal,
-   blocked only on (1).
+1. ~~Deploy `streamlit_app.py` to Streamlit Community Cloud~~ **Done
+   2026-08-19** — live at
+   [bde-ejendomsopslag.streamlit.app](https://bde-ejendomsopslag.streamlit.app).
+   One check still outstanding: verify the unofficial scrapers (energy
+   certificate, sale price) actually return data from the *deployed* instance,
+   not just locally — different outbound IP (Streamlit Cloud's, not this
+   machine's), and both sources are unofficial/reverse-engineered, so it's
+   worth confirming rather than assuming. Test with `Guldsmedgade 21, 8000
+   Aarhus`, which is confirmed to have both locally.
+2. **Get the demo in front of one real prospect** — the actual end goal, and
+   now genuinely unblocked. This is the priority.
 3. ~~Wait on Datafordeler support's reply re: the non-authenticating API-key~~
    **Resolved 2026-08-17** — auth works now (`CVR/v2?apiKey=`). Remaining,
    not blocking: find `CVR_Virksomhed`'s exact filter argument name (schema
@@ -94,6 +103,34 @@ in place every time it changes; never edit past entries in the Log — add a new
 ---
 
 ## Log
+
+### 2026-08-19 — Demo deployed and live: bde-ejendomsopslag.streamlit.app
+
+PRD 02's actual goal reached: a real, shareable URL. Two non-obvious blockers
+along the way, both worth remembering:
+
+1. **Private repo deployment needs a separate grant, done inside Streamlit's
+   own UI.** The initial "Sign in with GitHub" only requests `public_repo`
+   scope — confirmed by inspecting the authorization directly on GitHub
+   (Settings → Authorized OAuth Apps → Streamlit: only "Access public
+   repositories" listed, no private-repo permission at all). Revoking and
+   re-authorizing from GitHub's side doesn't fix this — it just re-runs the
+   same limited grant. The actual fix is Streamlit-side: profile → Settings →
+   Linked accounts → Source control → "Connect here," which triggers a
+   distinct, additional GitHub authorization specifically for private repos.
+   Several rounds of GitHub-settings troubleshooting (installed-apps page,
+   OAuth app scopes) were dead ends before finding this — the real fix was
+   never on GitHub's side at all.
+2. **Default Python version (3.14) can't build `pillow==10.4.0`** — no
+   prebuilt wheel for cp314 yet, falls back to a from-source build that fails
+   on missing zlib headers. Fixed by pinning the deployed app to Python 3.12
+   in Advanced Settings, matching local dev exactly rather than trusting the
+   platform default.
+
+Also: initially tried making the repo public as a way around the permissions
+maze, which would have worked (nothing sensitive was ever committed — see the
+2026-08-17 credential audit before the GitHub push), but the private-repo
+grant was found and used instead, so the repo stayed private.
 
 ### 2026-08-17 — Datafordeler support replied; CVR API-key auth now works
 
