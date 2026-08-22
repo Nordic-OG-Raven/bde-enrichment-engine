@@ -74,8 +74,9 @@ in place every time it changes; never edit past entries in the Log — add a new
   of v1 scope — but the hard infrastructure blocker (auth) is gone; only the
   exact query shape remains, solvable later via the official schema download
   or a follow-up to support. Only the `CVRPerson` entity is access-restricted
-  (Dataadgang request submitted 2026-08-17, **rejected 2026-08-22** — not
-  chased further, doesn't affect anything currently in scope) —
+  (Dataadgang request submitted 2026-08-17, **rejected 2026-08-22 —
+  permanently, private companies are categorically barred from this entity**,
+  not a fixable application issue) —
   everything else, including `CVR_Virksomhed`, needs no approval, just the
   right query. Full trail: [datafordeler-access.md](reference/datafordeler-access.md).
 - ~~BBR credential is still shared with the unrelated `aarhus_re` project~~
@@ -101,7 +102,14 @@ in place every time it changes; never edit past entries in the Log — add a new
    arguments — just need to apply it to CVR specifically) before building
    `cvr.py` for real. Not blocking.
 3. ~~Check back on the `CVRPerson` Dataadgang request status~~ **Resolved
-   2026-08-22 — rejected** ("Afvist," no reason shown in the summary view).
+   2026-08-22 — rejected, permanently.** Reason given: *"private virksomheder
+   kan ikke få adgang til personfølsomme data"* — private companies are
+   categorically barred from `CVRPerson`, not a fixable application issue.
+   Not worth ever reapplying under Nordic Raven Solutions. If a client
+   engagement ever needs CVR ownership/beneficial-owner data, BoligIQ's CVR
+   API already includes it (see
+   [competitor-analysis.md](reference/competitor-analysis.md)) — buy is now
+   the *only* option for that specific data, not just the leaning one.
    Doesn't block anything: `CVRPerson` was already out of v1 scope and stays
    there. Not worth chasing a reason or reapplying unless a real client
    engagement specifically needs ownership/participant data.

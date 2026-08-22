@@ -10,9 +10,21 @@ translation could lose precision.
 **CVR: only the `CVRPerson` entity requires an access request.** All other CVR
 entities (company name, address, status, industry code, etc.) are **unrestricted**
 — fetchable directly with the existing `bde-enrichment-engine` credentials, no
-Dataadgang request needed. This resolves the open question from the 2026-08-17
-engine review/log: we do NOT need to wait on any approval to build basic CVR company
-lookup — only ownership/participant data (`CVRPerson`) needs the request in flight now.
+Dataadgang request needed. We do NOT need to wait on any approval to build basic
+CVR company lookup — only ownership/participant data (`CVRPerson`) ever needed
+the request.
+
+**Update 2026-08-22 — that request was rejected, permanently and categorically.**
+Erhvervsstyrelsen's stated reason: *"private virksomheder kan ikke få adgang til
+personfølsomme data"* — private companies cannot access personally-sensitive
+data through this route, full stop. Not a fixable application issue (no bilag
+would have helped, per the earlier finding that none was even required for
+submission) — this is a structural policy exclusion for the private sector.
+**Not worth ever reapplying under a private-company CVR number.** If CVR
+ownership/beneficial-owner data is ever needed for a client engagement, the only
+route is a third-party aggregator that already has it under their own access
+terms — confirmed BoligIQ's CVR API includes "beneficial owners with ownership
+percentages" (see [competitor-analysis.md](competitor-analysis.md)).
 
 ## GraphQL API mechanics (worked out empirically, 2026-08-17 to 2026-08-19)
 
