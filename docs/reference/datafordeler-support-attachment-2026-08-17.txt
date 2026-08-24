@@ -3,7 +3,7 @@ IT-system: bde-enrichment-engine
 Bruger: Jonas Haahr, Nordic Raven Solutions, CVR 46097750
 API-Key: local-dev (oprettet 17-08-2026 kl. 15:11:16, status "Aktiv" i Administration,
 udløbsdato 17-08-2028)
-Registreret IP på IT-system: 83.94.224.228/32
+Registreret IP på IT-system: [redacted]/32
 
 Alle test kørt 35+ minutter efter nøglens oprettelsestidspunkt (jf. IT-systemets eget
 revisionslog), dvs. efter jeres oplyste 15-minutters aktiveringsvindue.

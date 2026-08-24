@@ -499,7 +499,7 @@ audience):
 > - IT-system: bde-enrichment-engine
 > - API-Key: local-dev, oprettet 17-08-2026 kl. 15:11:16, status "Aktiv",
 >   udløbsdato 17-08-2028
-> - Registreret IP: 83.94.224.228/32
+> - Registreret IP: [redacted]/32
 >
 > Testet (alle 401 Unauthorized, mere end 35 minutter efter oprettelse af
 > nøglen, dvs. efter jeres oplyste 15-minutters aktiveringsvindue):
@@ -519,7 +519,7 @@ audience):
 >
 > Med venlig hilsen,
 > Jonas Haahr
-> 51 50 56 95 / jonas.haahr@aol.com
+> jonas.haahr@aol.com
 
 Not blocking BBR work (unaffected, separate credential/system) — only blocks
 `cvr.py`, which is now on hold pending support's response.
@@ -529,7 +529,7 @@ Not blocking BBR work (unaffected, separate credential/system) — only blocks
 checkbox and fields built for exactly this situation. Submitted with: Register =
 CVR (chosen over "Ingen" so it lands with an owner, even though the bug is
 provably account-wide, not CVR-specific — the attached repro file makes that
-clear regardless), error code 401, checkbox checked, IP 83.94.224.228, failing
+clear regardless), error code 401, checkbox checked, IP [redacted], failing
 URL `https://graphql.datafordeler.dk/CVR/v1`, exact repro timestamp 17-08-2026
 15:46 CEST, certificate field marked not applicable (API-key auth, not OAuth
 certificate). Full technical repro attached as
