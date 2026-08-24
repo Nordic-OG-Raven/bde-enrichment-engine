@@ -1,6 +1,8 @@
 """
 BBR field codelists, sourced from BBR Instruks (instruks.bbr.dk) and BBR Teknik
-(teknik.bbr.dk), 2026-08-17. These are not guaranteed complete - unmapped codes
+(teknik.bbr.dk), 2026-08-17 (residential/commercial codes) and 2026-08-24
+(leisure/recreational codes, added after a real address - a summer house -
+hit an unmapped code). These are not guaranteed complete - unmapped codes
 fall back to a visible placeholder rather than silently disappearing.
 
 Sources:
@@ -13,7 +15,11 @@ Sources:
 USE_CODE = {
     "110": "Stuehus til landbrugsejendom",
     "120": "Fritliggende enfamiliehus",
+    "121": "Sammenbygget enfamiliehus",
+    "122": "Fritliggende enfamiliehus i tæt-lav bebyggelse",
     "130": "Række-, kæde- eller dobbelthus (udfases)",
+    "131": "Række-, kæde- og klyngehus",
+    "132": "Dobbelthus",
     "140": "Etagebolig-bygning, flerfamiliehus eller to-familiehus",
     "150": "Kollegium",
     "160": "Boligbygning til døgninstitution",
@@ -22,6 +28,15 @@ USE_CODE = {
     "320": "Bygning til kontor, handel, lager mv. (udfases)",
     "321": "Bygning til kontor",
     "322": "Bygning til detailhandel",
+    "510": "Sommerhus",
+    "520": "Enhed til ferieformål (feriekoloni, vandrehjem o.lign.)",
+    "530": "Enhed i forbindelse med idrætsudøvelse (klubhus, idrætshal o.lign.)",
+    "540": "Kolonihavehus",
+    "585": "Anneks i tilknytning til fritids- og sommerhus",
+    "590": "Anden enhed til fritidsformål",
+    "910": "Garage",
+    "920": "Carport",
+    "999": "Ukendt bygning",
 }
 
 WALL_MATERIAL = {

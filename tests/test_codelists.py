@@ -11,3 +11,9 @@ def test_unknown_code_gets_visible_fallback_not_silently_dropped():
 
 def test_none_code_stays_none():
     assert codelists.decode(codelists.WALL_MATERIAL, None) is None
+
+
+def test_summerhouse_use_code_decodes():
+    # Added after a real address (a summer house) hit this as an unmapped
+    # code - regression guard against it silently reverting to "Ukendt".
+    assert codelists.decode(codelists.USE_CODE, "510") == "Sommerhus"
