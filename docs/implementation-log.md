@@ -8,7 +8,15 @@ in place every time it changes; never edit past entries in the Log — add a new
 
 ## Current State
 
-**As of 2026-08-19**
+**As of 2026-08-25**
+
+- **Repo is public.** [github.com/Nordic-OG-Raven/bde-enrichment-engine](https://github.com/Nordic-OG-Raven/bde-enrichment-engine),
+  MIT licensed. Posted to LinkedIn same day. Pre-publish pass: purged an unrelated
+  personal file (`smv-digital-advisor-cv-draft.md` — home address, phone number) from
+  the working tree *and* full git history via `git filter-repo`, redacted a home IP
+  address and phone number that had been quoted inside a support-ticket transcript in
+  this log, added `LICENSE`, and rewrote `README.md` with a quickstart and a
+  highlights section aimed at a technical reader seeing this cold.
 
 - **BBR migrated off the shared `aarhus_re` credential — live and confirmed
   working, deployed and local.** `bbr.py` uses Datafordeler's GraphQL API
@@ -26,10 +34,13 @@ in place every time it changes; never edit past entries in the Log — add a new
   below and in
   [datafordeler-access.md](reference/datafordeler-access.md).
 
-- **SMV:Digital advisor status: approved.** CV still needs finishing on
-  ehmidt.dk (email inbox, LinkedIn URL, hourly rate, reference). Onboarding
-  webinar deadline: **2026-11-17**.
-- **Clients: zero.** Fully pre-revenue.
+- **Clients: zero.** Fully pre-revenue — this repo exists to demonstrate the
+  technical work, not to represent an established business.
+- **BBR codelist gap found and fixed (2026-08-24).** A real address (a summer
+  house) hit an unmapped `USE_CODE` and showed "Ukendt (kode 510)". Expanded
+  the codelist with the full leisure/recreational range. See the
+  [2026-08-24 log entry](#2026-08-24--fixed-unmapped-summer-house-use_code)
+  below.
 - **Product 1, Enrichment Engine — v1.1, done, reviewed, hardened, expanded.**
   `enrichment_engine/` resolves a free-text Danish address (Dataforsyningen,
   free/no auth) to a normalized `PropertyProfile` with: BBR building data
@@ -127,6 +138,75 @@ in place every time it changes; never edit past entries in the Log — add a new
 ---
 
 ## Log
+
+### 2026-08-25 — Repo made public: history-purge, redactions, README/review pass
+
+Made the repo public and posted it to LinkedIn. Before flipping visibility, ran a
+pass over the repo specifically checking what a stranger — recruiter or otherwise —
+would see landing on it cold, not just the usual secrets/credentials check:
+
+- `smv-digital-advisor-cv-draft.md` (an unrelated draft for a separate SMV:Digital
+  advisor application, containing home address and phone number) was tracked in
+  git. Deleted from the working tree *and* purged from every commit in git history
+  via `git filter-repo` — a normal delete would have left it fully recoverable from
+  any earlier commit once the repo went public. Force-pushed the rewritten history.
+  Caught a real mistake mid-fix: the first force-push landed on a stray `main`
+  branch while the repo's actual default branch is `master` — would have left the
+  old, unpurged history live on the branch GitHub actually serves. Fixed by
+  force-pushing to `master` and deleting the stray branch.
+- A home IP address (appeared 3x) and a phone number, both incidental to a quoted
+  Datafordeler support-ticket transcript in this log and its attachment file, were
+  redacted — no informational value for a reader, meaningfully identifying.
+- Confirmed `.env` was never committed (checked full history, not just current
+  tree) and `.env.example` holds only placeholders.
+- `README.md` had gone stale: it linked to the now-deleted CV draft file, and led
+  with "pre-revenue, zero clients" as its second sentence rather than what the
+  project actually demonstrates. Rewrote with a quickstart, a highlights section,
+  and the live-demo link up front.
+- [Finding 2 of the v1 review](reviews/2026-08-17-engine-v1-review.md) was still
+  marked "documented, not fixed" even though the 2026-08-19 GraphQL migration had
+  actually resolved it — updated the status so the review doc doesn't read as an
+  open, unresolved finding it no longer is.
+- Added `LICENSE` (MIT) — was missing.
+- This entry itself: the "Current State" section and this Log had drifted out of
+  sync with its own stated convention (dated entries for every change) — the
+  2026-08-22 CVRPerson rejection and 2026-08-24 codelist fix were reflected inline
+  in Current State but never got their own Log entries. Backfilled both below.
+
+Full suite re-run after all changes: 27/27 passing.
+
+### 2026-08-24 — Fixed unmapped summer-house USE_CODE
+
+A real address (a summer house) resolved successfully but displayed
+"Ukendt (kode 510)" instead of a decoded use-type label — `codelists.USE_CODE`
+only covered residential/commercial codes from the original 2026-08-17 pass, not
+leisure/recreational ones. Looked up the missing range in BBR Instruks/BBR Teknik
+and expanded `USE_CODE` with the full leisure-code range (510 Sommerhus, 520
+ferieformål, 530 idrætsudøvelse, 540 kolonihavehus, 585/590 anneks/anden enhed til
+fritidsformål) — see `enrichment_engine/codelists.py` for citations. Added
+`test_summerhouse_use_code_decodes` as a regression guard. Verified live against
+the real address that surfaced the gap.
+
+### 2026-08-22 — CVRPerson Dataadgang request rejected — permanently
+
+Checked back on the CVRPerson access request submitted 2026-08-17 (see the
+2026-08-17 "Confirmed CVR access tiers" entry below). Rejected by Erhvervsstyrelsen
+with the stated reason *"private virksomheder kan ikke få adgang til
+personfølsomme data"* — private companies cannot access personally-sensitive data
+through this route, full stop. Confirmed via the Dataadgang status table
+("Afvist") and the rejection-reason text, both screenshotted from Datafordeler
+Administration. Not a fixable application issue — no bilag or resubmission would
+help, since this is a structural policy exclusion for the private sector, not a
+gap in the original application (which the 2026-08-17 entry already confirmed
+needed no bilag to submit). Documented in
+[datafordeler-access.md](reference/datafordeler-access.md) as permanent and not
+worth ever reapplying under a private-company CVR number. If CVR ownership/
+beneficial-owner data is ever needed for a real client engagement, the only route
+is a third-party aggregator that already has it under their own access terms —
+confirmed BoligIQ's CVR API includes this (see
+[competitor-analysis.md](reference/competitor-analysis.md)). Closes out the last
+open background item from the 2026-08-19 Current State — `CVRPerson` was already
+out of v1 scope, so this doesn't block anything, it just closes the loop.
 
 ### 2026-08-19 — Deployed-app 401 incident: root cause, wrong turns, and the actual fix
 

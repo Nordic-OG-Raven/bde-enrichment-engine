@@ -16,11 +16,11 @@ unrelated projects.** Reused from `aarhus_re` without that project knowing this 
 exists. If either project's traffic gets the account rate-limited/flagged, both break.
 The credential is also hardcoded as a source default in `aarhus_re/config/credentials.py`,
 so it's only as safe as that project's git history.
-**Status: Documented, not fixed.** No code fix possible without registering a
-dedicated BDE tjenestebruger account with Datafordeler — that's a signup/approval
-flow, same category of effort as the CVR access request. Queued as a next action
-rather than done inline; risk accepted for now given zero budget and low current
-call volume.
+**Status: Fixed 2026-08-19.** `bbr.py` migrated to Datafordeler's GraphQL API on a
+dedicated `DATAFORDELER_API_KEY`, no longer touching the shared credential. See the
+[2026-08-19 log entry](../implementation-log.md). **Partially open still**: `bfe.py`
+(the BFE-number resolution hop for sale-price lookups) remains on the shared REST
+credential — its GraphQL equivalent wasn't chased down, tracked in Next Actions.
 
 **3. `config.py` raised a raw `KeyError` with no guidance if `.env` was missing.**
 **Status: Fixed** — friendly `RuntimeError` pointing at `.env.example`.
